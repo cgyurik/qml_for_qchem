@@ -73,6 +73,7 @@ The fermionic states are represented in the canonical orbital basis, and mapped 
     
 **classical input of NNs**:
 - The geometry of the molecule
+- The orbital energies (single-particle energies for each canonical orbital)
 - The canonical orbital matrix, which indicates which linear combination of the atomic orbitals (STO-3G basis functions) construct the molecular orbitals
 
 **Model output**:
