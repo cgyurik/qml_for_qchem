@@ -1,12 +1,13 @@
 import os
 import numpy as np
 from itertools import combinations
+from scipy.sparse.linalg import eigsh
+import scipy.linalg
 
 import json
 from openfermionpsi4 import run_psi4
 from openfermion.hamiltonians import MolecularData
 from openfermion.transforms import get_sparse_operator
-from scipy.sparse.linalg import eigsh
 
 from load_lib import *
 
@@ -162,9 +163,10 @@ class MoleculeDataGenerator:
     def _generate_data(self):
         # generate unitary that transforms molecular orbitals to Orthogonal
         # Atomic Orbitals (OAO)
-        canonical_to_oao = self.molecule.canonical_orbitals.copy().T
-        for row in canonical_to_oao:
-            row[:] /= np.sqrt(np.sum(np.abs(row)**2))
+        M = self.molecule.canonical_orbitals
+        P = scipy.linalg.inv(M)
+        canonical_to_oao = (P @ scipy.linalg.sqrtm(M @ M.T))
+        
             
         self.data_dict = dict(
             geometry=self.molecule.geometry,
