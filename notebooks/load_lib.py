@@ -26,11 +26,12 @@ def load_data(filename):
     with open(filename, 'rt') as f:
         data_dict = json.load(f)
     for k, v in data_dict.items():
-        if k in ['geometry', 'multiplicity', 'exact_energy']:
+        if k in ['geometry', 'multiplicity', 'exact_energy', 'hf_energy']:
             continue
         if k == 'ground_states':
             v = np.array(v)
             data_dict.update({k: np.reshape([complex(s) for s in v.flatten()], v.shape)})
             continue
+        # all other fields should be arrays
         data_dict[k] = np.array(v)
     return data_dict
