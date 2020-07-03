@@ -4,11 +4,14 @@ Using quantum convolutional neural networks (QCNN) to predict quantum chemistry 
 
 ## This repository
 
-Content:
+Contents of the main code folder `convoQC`:
 - `notebooks/Guide_to_the_data.ipynb`: guide to generation & usage of data files
-- the `notebooks` directory also contains scripts used for generating/loading data
-- `data` directory containing all data of generated molecules (in subdirs `molecules` and `json`)
-- `figures/`: figures for use in this README file etc.
+- `utils` directory: scripts used for generating/loading data
+- `data` directory: all data of generated molecules (in subdirs `molecules` and `json`)
+
+Additionally, at the root level of this repository, we find:
+- `figures` directory: figures for use in this README file etc.
+- setup code for continuous integration
 
 
 ---
