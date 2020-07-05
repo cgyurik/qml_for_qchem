@@ -17,11 +17,13 @@ ROUNDING = 4
 DEFAULT_RNG = np.random.default_rng()
 
 
-def encode_complex(obj):
+def encode_complex_and_array(obj):
     '''
     supplement for json.dump to be able to deal with complex numbers
     and np.arrays.
     '''
+    if isinstance(obj, np.ndarray):
+        return(obj.tolist())
     if isinstance(obj, complex):
         return str(obj)
     raise TypeError(f'Object of type {type(obj)} is not JSON serializable')
@@ -171,14 +173,15 @@ class MoleculeDataGenerator:
         self.data_dict = dict(
             geometry=self.molecule.geometry,
             multiplicity=self.molecule.multiplicity,
-            canonical_orbitals=self.molecule.canonical_orbitals.tolist(),
-            canonical_to_oao=canonical_to_oao.tolist(),
-            orbital_energies=self.molecule.orbital_energies.tolist(),
+            canonical_orbitals=self.molecule.canonical_orbitals,
+            canonical_to_oao=canonical_to_oao,
+            orbital_energies=self.molecule.orbital_energies,
             exact_energy=self.exact_energy,
-            ground_states=self.ground_states.tolist()
+            ground_states=self.ground_states,
+            hf_energy=self.molecule.hf_energy[()]
         )
         with open(JSON_DIR + self.filename + '.json', 'wt') as f:
-            json.dump(self.data_dict, f, default=encode_complex)
+            json.dump(self.data_dict, f, default=encode_complex_and_array)
             
             
 #### H4 family ####            
