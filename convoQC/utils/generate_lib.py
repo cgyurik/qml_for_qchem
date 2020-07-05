@@ -11,7 +11,9 @@ from openfermion.hamiltonians import MolecularData
 from openfermion.transforms import get_sparse_operator
 from openfermionpsi4 import run_psi4
 
+# pylint: disable = wildcard-import
 from load_lib import *
+# pylint: enable = wildcard-import
 
 DMIN = 0.4
 DMAX = 1.5
@@ -44,7 +46,7 @@ def chop(array, abs_tol=1E-12):
 class FailedGeneration(Exception):
     pass
 
-
+#  pylint: disable = undefined-variable
 class MoleculeDataGenerator:
     """
     Class to generate the MolecularData object with the right multiplicity,
@@ -181,16 +183,16 @@ class MoleculeDataGenerator:
         with open(JSON_DIR + self.filename + '.json', 'wt') as f:
 
             json.dump(self.data_dict, f, default=encode_complex_and_array)
-            
-            
-#### H4 family ####            
+
+#### H4 family ####
+
 
 def check_geometry(geometry):
-    '''
+    """
     Check that the geometry respects the rules:
         - minimum distance of atom pairs (see DMIN for value)
         - maximum distance of adjacent atoms (see DMAX for value)
-    '''
+    """
     _, positions = list(zip(*geometry))
     for (i, pA), (j, pB) in combinations(enumerate(positions), 2):
         dist = np.sqrt(np.sum((np.array(pA) - np.array(pB))**2))
