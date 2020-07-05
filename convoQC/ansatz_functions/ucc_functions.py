@@ -1,12 +1,12 @@
 """Functions to generate UCC amplitudes and operators."""
 
-from typing import Union, Sequence
+from typing import Union, Sequence, Generator, List, Any
 import numpy
 
 import sympy
 import openfermion
 import cirq
-from openfermioncirq.utils.qubitoperator_translator import (
+from openfermioncirq.utils.qubitoperator_translator import (  # type: ignore
     _qubitoperator_to_pauli_string)
 
 
@@ -137,7 +137,7 @@ def generate_ucc_amplitudes_spin_conserved(
 
 def generate_ucc_operator(
         single_amplitudes: Sequence,
-        double_amplitudes: Sequence) -> openfermion.FermionOperator:
+        double_amplitudes: Sequence) -> List[Any]:
     """
     Create UCC Fermionic Operator from amplitude list.
 
@@ -175,7 +175,7 @@ def generate_ucc_operator(
 def generate_circuit_from_pauli_string(
         operator: openfermion.FermionOperator,
         parameter_name: str,
-        transformation=openfermion.jordan_wigner) -> cirq.Circuit:
+        transformation=openfermion.jordan_wigner) -> Generator:
     """
     Create a cirq.Circuit object from the operator.
 

@@ -49,7 +49,9 @@ def overlap_with_circuit_state(parameters: Sequence,
         cirq.resolve_parameters(circuit,
                                 cirq.ParamResolver(parameters_dict)))
 
-    overlap = numpy.abs(numpy.dot(simulated_circuit.final_state.conj(), state))
+    overlap = numpy.abs(
+        numpy.dot(simulated_circuit.final_state.conj(),  # type: ignore
+                  state))
     if overlap:
         return overlap
     else:
