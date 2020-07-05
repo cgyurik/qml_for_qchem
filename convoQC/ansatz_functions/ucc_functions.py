@@ -115,7 +115,6 @@ def generate_ucc_amplitudes_spin_conserved(
 
     even_singles = even_singles.reshape(-1, 2)
     odd_singles = odd_singles.reshape(-1, 2)
-    print(even_singles, odd_singles)
 
     for e, o in zip(even_singles.tolist(), odd_singles.tolist()):
         single_amplitudes.append([e, 1.0])
