@@ -1,7 +1,8 @@
+"""Functions to load molecules."""
 import os
-import numpy as np
-
 import json
+
+import numpy as np
 
 DATA_DIR = os.path.realpath('../data')
 MOLECULES_DIR = DATA_DIR + '/molecules/'
@@ -9,14 +10,15 @@ JSON_DIR = DATA_DIR + '/json/'
 
 
 def load_data(filename):
-    '''
-    Returns data dictionary relative to the input filename, if the data file 
-    exists. If filename is a relative path, it is assumed to be in this 
+    """
+    Return data dictionary of the filename input.
+
+    If filename is a relative path, it is assumed to be in this
     repository's directory data/json/
-    
+
     Raises:
         FileNotFoundError if file does not exist
-    '''
+    """
     if not filename.endswith('.json'):
         filename = filename + '.json'
     if not filename.startswith('/'):
@@ -30,7 +32,8 @@ def load_data(filename):
             continue
         if k == 'ground_states':
             v = np.array(v)
-            data_dict.update({k: np.reshape([complex(s) for s in v.flatten()], v.shape)})
+            data_dict.update(
+                {k: np.reshape([complex(s) for s in v.flatten()], v.shape)})
             continue
         data_dict[k] = np.array(v)
     return data_dict

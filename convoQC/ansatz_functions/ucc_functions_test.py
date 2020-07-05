@@ -1,10 +1,8 @@
 """Test for UCC functions."""
 
-import numpy
 import scipy
 import pytest
 
-from sympy import Symbol
 import cirq
 import openfermion
 

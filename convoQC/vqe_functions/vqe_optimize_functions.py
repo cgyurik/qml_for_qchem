@@ -1,5 +1,5 @@
 """Functions to run a VQE."""
-from typing import List, Dict, Union, Sequence
+from typing import Dict, Union, Sequence, Optional
 
 import numpy
 

@@ -11,4 +11,4 @@
 cd "$( dirname "${BASH_SOURCE[0]}" )"
 cd $(git rev-parse --show-toplevel)
 
-pylint --rcfile=dev_tools/conf/.pylintrc $@ convoQC
+pylint --rcfile=dev_tools/config/.pylintrc $@ convoQC dev_tools
