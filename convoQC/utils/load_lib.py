@@ -4,7 +4,9 @@ import json
 
 import numpy as np
 
-DATA_DIR = os.path.realpath('../data')
+BASE_DIR = os.path.dirname(os.path.dirname(__file__)) # manage relative paths
+DATA_DIR = os.path.realpath(BASE_DIR + '/data')
+
 MOLECULES_DIR = DATA_DIR + '/molecules/'
 JSON_DIR = DATA_DIR + '/json/'
 
