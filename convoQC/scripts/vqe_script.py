@@ -19,7 +19,7 @@ try:
         generate_ucc_operator)
     from convoQC.vqe_functions.vqe_optimize_functions import (
         overlap_with_circuit_state)
-except:
+except Exception:
     sys.path.insert(0, os.getcwd() + '/../')
     from ansatz_functions.ucc_functions import (  # type: ignore
         generate_ucc_amplitudes,

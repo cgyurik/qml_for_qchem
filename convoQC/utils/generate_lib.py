@@ -46,6 +46,7 @@ def chop(array, abs_tol=1E-12):
 class FailedGeneration(Exception):
     pass
 
+
 #  pylint: disable = undefined-variable
 class MoleculeDataGenerator:
     """
@@ -59,7 +60,8 @@ class MoleculeDataGenerator:
 
     Raises:
         FailedGeneration: If an exception is raised (e.g. by openfemion) during
-        molecule or data generation. Eventual generated files are removed first.
+        molecule or data generation. Eventual generated files are removed
+        first.
     """
 
     def __init__(self, geometry):
@@ -100,7 +102,7 @@ class MoleculeDataGenerator:
         where <atom> is the atomic symbol (one or two letters) and numerical
         values <xi>,<yi>,<zi> are represented without any trailing zero.
         """
-        return (str(self.geometry)
+        return ((str(self.geometry) + '.EXT')
                 .replace(' ', '')
                 .replace(']', ')')
                 .replace('[', '')
@@ -108,7 +110,10 @@ class MoleculeDataGenerator:
                 .replace(')', '')
                 .replace('(', '')
                 .replace("'", '')
-                .replace('.0,', ','))
+                .replace('.0,', ',')
+                .replace('.0;', ';')
+                .replace('.0.EXT', '.EXT')
+                .replace('.EXT', ''))
 
     def _clean_up_files(self):
         if os.path.exists(MOLECULES_DIR + self.filename + '.hdf5'):
