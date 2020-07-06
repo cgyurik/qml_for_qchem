@@ -78,9 +78,10 @@ def main(*, n_electrons: int, n_orbitals: int) -> OptimizeResult:
     qubit_hamiltonian = openfermion.jordan_wigner(
         openfermion.get_fermion_operator(
             molecule.get_molecular_hamiltonian()))
-
+    #  pylint: disable = unused-variable
     eigvals, eigvecs = numpy.linalg.eigh(
         openfermion.qubit_operator_sparse(qubit_hamiltonian).toarray())
+    # pylint: enable = unused-variable
     ground_state = eigvecs[:, 0]
 
     singles, doubles = generate_ucc_amplitudes(
