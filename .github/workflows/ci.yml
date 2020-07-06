@@ -6,9 +6,6 @@ name: Continuous Integration
 # This allows one to notice is CI fails
 # although it updates the branch.
 on:
-  push:
-    branches:
-      - master
   pull_request:
     branches:
       - master
