@@ -52,14 +52,14 @@ def overlap_with_circuit_state(parameters: Sequence,
     overlap = numpy.abs(
         numpy.dot(simulated_circuit.final_state.conj(),  # type: ignore
                   state))
-    if overlap:
+    if overlap_bool:
         return overlap
     else:
         return (1.0 - overlap)
 
 
-def expectation_value_with_circuit_state(circuit: cirq.Circuit,
-                                         parameters: Sequence,
+def expectation_value_with_circuit_state(parameters: Sequence,
+                                         circuit: cirq.Circuit,
                                          parameters_dict: Dict,
                                          hamiltonian: Hamiltonian,
                                          simulator: cirq.Simulator) -> float:

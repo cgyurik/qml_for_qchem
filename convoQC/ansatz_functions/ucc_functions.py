@@ -6,8 +6,10 @@ import numpy
 import sympy
 import openfermion
 import cirq
-from openfermioncirq.utils.qubitoperator_translator import (  # type: ignore
-    _qubitoperator_to_pauli_string)
+#  pylint: disable = line-too-long
+from .qubitoperator_to_paulistring_translator import (  # type: ignore
+    qubitoperator_to_pauli_string)
+#  pylint: enable = line-too-long
 
 
 def generate_ucc_amplitudes(n_electrons: Union[int, float],
@@ -208,7 +210,7 @@ def generate_circuit_from_pauli_string(
     qubit_op = transformation(operator)
 
     for op, val in qubit_op.terms.items():
-        pauli_string = _qubitoperator_to_pauli_string(
+        pauli_string = qubitoperator_to_pauli_string(
             openfermion.QubitOperator(op, numpy.sign(val)))
         yield cirq.Circuit(
             cirq.PauliStringPhasor(pauli_string,
