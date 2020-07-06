@@ -11,36 +11,14 @@ from openfermion.hamiltonians import MolecularData
 from openfermion.transforms import get_sparse_operator
 from openfermionpsi4 import run_psi4
 
-# pylint: disable = wildcard-import
-from load_lib import *
-# pylint: enable = wildcard-import
+from .load_lib import MOLECULES_DIR, JSON_DIR, load_data
+from .generic import encode_complex_and_array, chop
+
 
 DMIN = 0.4
 DMAX = 1.5
 ROUNDING = 4
 DEFAULT_RNG = np.random.default_rng()
-
-
-def encode_complex_and_array(obj):
-    """
-    supplement for json.dump to be able to deal with complex numbers
-    and np.arrays.
-    """
-    if isinstance(obj, np.ndarray):
-        return(obj.tolist())
-
-    if isinstance(obj, complex):
-        return str(obj)
-    raise TypeError(f'Object of type {type(obj)} is not JSON serializable')
-
-
-def chop(array, abs_tol=1E-12):
-    """
-    Set to zero numerical zeros (values below abs_tol) in a np.array.
-    Acts in-place.
-    """
-    array[abs(array) < abs_tol] = 0
-    return array
 
 
 class FailedGeneration(Exception):
@@ -185,11 +163,12 @@ class MoleculeDataGenerator:
             ground_states=self.ground_states,
             hf_energy=self.molecule.hf_energy[()]
         )
-        with open(JSON_DIR + self.filename + '.json', 'wt') as f:
 
+        with open(JSON_DIR + self.filename + '.json', 'wt') as f:
             json.dump(self.data_dict, f, default=encode_complex_and_array)
 
-#### H4 family ####
+
+# *** H4 family ***
 
 
 def check_geometry(geometry):
@@ -203,7 +182,7 @@ def check_geometry(geometry):
         dist = np.sqrt(np.sum((np.array(pA) - np.array(pB))**2))
         if dist < DMIN:  # no pair closer than dmin
             return False
-        if j == i+1 and dist > DMAX:  # no adjacent pair farther than dmax
+        if j == i + 1 and dist > DMAX:  # no adjacent pair farther than dmax
             return False
     return True
 
@@ -222,12 +201,12 @@ def H4_generate_random_geometry(rng=DEFAULT_RNG):
     x1 = round(rng.uniform(DMIN, DMAX), ROUNDING)
     geometry.append(('H', (x1, 0., 0.)))
     r2 = rng.uniform(DMIN, DMAX)
-    theta2 = rng.uniform(0, 2*np.pi)
+    theta2 = rng.uniform(0, 2 * np.pi)
     x2 = round(np.cos(theta2) * r2, ROUNDING)
     y2 = round(np.sin(theta2) * r2, ROUNDING)
     geometry.append(('H', (x2, y2, 0.)))
     phi3 = np.arcsin(rng.uniform(-1, 1))
-    theta3 = rng.uniform(0, 2*np.pi)
+    theta3 = rng.uniform(0, 2 * np.pi)
     r3 = rng.uniform(DMIN, DMAX)
     x3 = round(r3 * np.cos(phi3) * np.cos(theta3), ROUNDING)
     y3 = round(r3 * np.cos(phi3) * np.sin(theta3), ROUNDING)
