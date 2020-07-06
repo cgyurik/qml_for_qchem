@@ -1,0 +1,58 @@
+name: Continuous Integration
+
+# Checks push and pull request to master
+# People with admin rights and owners can
+# push directly to master.
+# This allows one to notice is CI fails
+# although it updates the branch.
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+
+jobs:
+  mypy:
+    name: Type check
+    runs-on: ubuntu-16.04
+    steps:
+      - uses: actions/checkout@v1
+      - uses: actions/setup-python@v1
+        with:
+          python-version: '3.6'
+          architecture: 'x64'
+      - name: Install mypy
+        run: cat dev_tools/conf/pip-list-dev-tools.txt | grep mypy | xargs pip install
+      - name: Type check
+        run: check/mypy
+  lint:
+    name: Lint check
+    runs-on: ubuntu-16.04
+    steps:
+      - uses: actions/checkout@v1
+      - uses: actions/setup-python@v1
+        with:
+          python-version: '3.6'
+          architecture: 'x64'
+      - name: Install pylint
+        run: cat dev_tools/conf/pip-list-dev-tools.txt | grep "pylint\|astroid" | grep -v "#" | xargs pip install
+      - name: Lint
+        run: check/pylint
+  pytest:
+    name: Pytest Ubuntu
+    runs-on: ubuntu-16.04
+    steps:
+      - uses: actions/checkout@v1
+      - uses: actions/setup-python@v1
+        with:
+          python-version: '3.6'
+          architecture: 'x64'
+      - name: Install requirements
+        run: |
+          pip install -r requirements.txt
+          pip install -r dev_tools/conf/pip-list-dev-tools.txt
+          git config --global user.name ${GITHUB_ACTOR}
+      - name: Pytest check
+        run: check/pytest --actually-quiet
