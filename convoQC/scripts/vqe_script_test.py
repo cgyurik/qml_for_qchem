@@ -39,6 +39,7 @@ def test_initialize_hf(n_electrons):
 
     assert len(list_of_xgates) == n_electrons
 
+
 def test_parse_arguments():
     """Test parsing arguments."""
     arguments = parse_arguments(['--n_electrons=4', '--n_orbitals=6'])

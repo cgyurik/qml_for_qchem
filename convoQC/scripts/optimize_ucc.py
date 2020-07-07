@@ -21,7 +21,7 @@ from ansatz_functions.ucc_functions import (  # type: ignore
     generate_circuit_from_pauli_string,
     generate_ucc_operator)
 from vqe_functions.vqe_optimize_functions import (  # type: ignore
-    overlap_with_circuit_state,
+    circuit_state_fidelity,
     expectation_value_with_circuit_state)
 from utils.load_lib import (  # type: ignore
     load_data,
@@ -46,7 +46,8 @@ def initialize_hf_state(n_electrons: int) -> Generator:
 
 def optimize_ucc(
     filename: str,
-    initial_params: Union[Tuple[float, ...], None] = None
+    initial_params: Union[Tuple[float, ...], None] = None,
+    maxiter: int = 10000
 ) -> dict:
     """
     Run the optimization sequence
@@ -56,6 +57,7 @@ def optimize_ucc(
             `notebooks/Guide_to_data`), without any extension or directory.
         initial_params: initial UCC optimization params. If None (default),
             parameters are randomly extracted.
+        maxiter: the maximum number of iterations for the COBYLA optimizer
 
     Returns:
         dictionary containing optimized parameters and some benchmark data,
@@ -95,13 +97,16 @@ def optimize_ucc(
         rng = numpy.random.default_rng()
         initial_params = rng.uniform(-numpy.pi, numpy.pi, len(parameter_dict))
 
+    def cost_function(params):
+        return 1 - circuit_state_fidelity(params, circuit, parameter_dict,
+                                          ground_states, simulator)
+
     stopwatch = time.time()
     print('Starting optimization.')
     result = scipy.optimize.minimize(
-        overlap_with_circuit_state,
+        cost_function,
         x0=(initial_params),
-        args=(circuit, parameter_dict, ground_states, simulator, False),
-        options={'maxiter': 2000},
+        options={'maxiter': maxiter},
         method='COBYLA')
     print(result)
     print('Optimization time: {} minutes \n'
@@ -122,26 +127,27 @@ def optimize_ucc(
 
 
 # ***  Main script code  ***
+if __name__ == '__main__':
 
-usage = 'Usage: python {} <filename>'.format(sys.argv[0])
-if len(sys.argv) is not 2:
-    print(usage)
-    raise Exception('wrong usage')
-if not isinstance(sys.argv[1], str):
-    print(usage)
-    raise TypeError('The first argument is not a string')
-filename = sys.argv[1]
+    usage = 'Usage: python {} <filename>'.format(sys.argv[0])
+    if len(sys.argv) is not 2:
+        print(usage)
+        raise Exception('wrong usage')
+    if not isinstance(sys.argv[1], str):
+        print(usage)
+        raise TypeError('The first argument is not a string')
+    filename = sys.argv[1]
 
-existing_ucc_files = os.listdir(UCC_DIR)
-if (filename + '.json' in existing_ucc_files):
-    print('The file data/ucc/{}.json exists already. loading file.')
-    ucc_dict = load_ucc_data(filename)
-else:
-    ucc_dict = optimize_ucc(filename)
-    print(type(ucc_dict['optimizer_success']))
+    existing_ucc_files = os.listdir(UCC_DIR)
+    if (filename + '.json' in existing_ucc_files):
+        print('The file data/ucc/{}.json exists already. loading file.')
+        ucc_dict = load_ucc_data(filename)
+    else:
+        ucc_dict = optimize_ucc(filename)
+        print(type(ucc_dict['optimizer_success']))
 
-    print('saving data to file.')
-    with open(UCC_DIR + filename + '.json', 'wt') as f:
-        json.dump(ucc_dict, f, default=encode_complex_and_array)
+        print('saving data to file.')
+        with open(UCC_DIR + filename + '.json', 'wt') as f:
+            json.dump(ucc_dict, f, default=encode_complex_and_array)
 
-print(*((k, v) for k, v in ucc_dict.items()), sep='\n')
+    print(*((k, v) for k, v in ucc_dict.items()), sep='\n')

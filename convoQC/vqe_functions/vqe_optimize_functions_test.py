@@ -12,7 +12,7 @@ from convoQC.ansatz_functions.ucc_functions import (
     generate_circuit_from_pauli_string
 )
 from .vqe_optimize_functions import (
-    overlap_with_circuit_state,
+    circuit_state_fidelity,
     expectation_value_with_circuit_state)
 
 
@@ -68,7 +68,7 @@ def test_raises():
     start_parameters = [1.0, 0.0]
 
     with pytest.raises(ValueError):
-        overlap_with_circuit_state(
+        circuit_state_fidelity(
             start_parameters, circuit, param_dict,
             ground_state, simulator)
     with pytest.raises(ValueError):
@@ -116,18 +116,15 @@ def test_overlap_function():
 
     start_parameters = numpy.zeros(len(param_dict))
 
-    assert overlap_with_circuit_state(
+    assert circuit_state_fidelity(
         start_parameters, circuit, param_dict, hf_state,
-        simulator, True) == 1.0
-    assert overlap_with_circuit_state(
-        start_parameters, circuit, param_dict, hf_state,
-        simulator, False) == 0.0
+        simulator) == 1.0
 
-    gs_overlap = overlap_with_circuit_state(
+    gs_overlap = circuit_state_fidelity(
         start_parameters, circuit, param_dict, ground_state,
-        simulator, True)
+        simulator)
     numpy.testing.assert_approx_equal(gs_overlap, 0.99, 2)
-    numpy.testing.assert_approx_equal(1 - gs_overlap, 0.006, 1)
+    numpy.testing.assert_approx_equal(1 - gs_overlap, 0.0127, 3)
 
 
 def test_expectation_value_function():

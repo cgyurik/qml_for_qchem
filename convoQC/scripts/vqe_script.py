@@ -18,7 +18,7 @@ try:
         generate_circuit_from_pauli_string,
         generate_ucc_operator)
     from convoQC.vqe_functions.vqe_optimize_functions import (
-        overlap_with_circuit_state)
+        circuit_state_fidelity)
 except Exception:
     sys.path.insert(0, os.getcwd() + '/../')
     from ansatz_functions.ucc_functions import (  # type: ignore
@@ -26,7 +26,7 @@ except Exception:
         generate_circuit_from_pauli_string,
         generate_ucc_operator)
     from vqe_functions.vqe_optimize_functions import (  # type: ignore
-        overlap_with_circuit_state,
+        circuit_state_fidelity,
         expectation_value_with_circuit_state)
 
 
@@ -101,7 +101,7 @@ def main(*, n_electrons: int, n_orbitals: int) -> OptimizeResult:
                                             len(parameter_dict))
 
     result = minimize(
-        overlap_with_circuit_state,
+        lambda *x: 1 - circuit_state_fidelity(*x),
         x0=(start_parameters),
         args=(circuit, parameter_dict, ground_state, simulator, False),
         options={'maxiter': 2000},
