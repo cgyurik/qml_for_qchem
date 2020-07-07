@@ -113,7 +113,7 @@ def optimize_ucc(
 
     return dict(
         params=result['x'],
-        overlap=result['fun'],
+        infidelity=result['fun'],
         energy_expval=optimized_energy,
         energy_error=optimized_energy - data_dict['exact_energy'],
         optimizer_success=result['success'],

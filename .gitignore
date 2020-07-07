@@ -1,3 +1,7 @@
+# SLURM output and jobs files
+.out
+.jobs
+
 # mac OSX junk
 .DS_store
 
