@@ -48,9 +48,9 @@ def circuit_state_fidelity(parameters: Sequence,
         cirq.resolve_parameters(circuit,
                                 cirq.ParamResolver(parameters_dict)))
 
-    fidelity = sum(numpy.abs(
-        numpy.dot(simulated_circuit.final_state.conj(),  # type: ignore
-                  state))**2 for state in target_states.T)
+    fidelity = sum(
+        numpy.abs(numpy.dot(simulated_circuit.final_state.conj(), state))**2
+        for state in target_states.T)
 
     return fidelity
 

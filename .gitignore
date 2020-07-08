@@ -1,5 +1,9 @@
+# a sandbox directory to try notebooks/scripts locally
+sandbox
+
 # SLURM output and jobs files
 .out
+.err
 .jobs
 
 # mac OSX junk

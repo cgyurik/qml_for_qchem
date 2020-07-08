@@ -84,8 +84,7 @@ def main(*, n_electrons: int, n_orbitals: int) -> OptimizeResult:
     # pylint: enable = unused-variable
     ground_state = eigvecs[:, 0]
 
-    singles, doubles = generate_ucc_amplitudes(
-        n_electrons, n_orbitals)
+    singles, doubles = generate_ucc_amplitudes(n_electrons, n_orbitals)
     ucc_ferop = generate_ucc_operator(singles, doubles)
 
     simulator = cirq.Simulator()
