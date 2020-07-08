@@ -27,7 +27,7 @@ except Exception:
         generate_ucc_operator)
     from vqe_functions.vqe_optimize_functions import (  # type: ignore
         circuit_state_fidelity,
-        expectation_value_with_circuit_state)
+        circuit_state_expval)
 
 
 def get_molecule_data():
@@ -107,7 +107,7 @@ def main(*, n_electrons: int, n_orbitals: int) -> OptimizeResult:
         options={'maxiter': 2000},
         method='COBYLA')
 
-    optimized_energy = expectation_value_with_circuit_state(
+    optimized_energy = circuit_state_expval(
         result['x'], circuit, parameter_dict,
         qubit_hamiltonian, simulator)
     return result, optimized_energy
