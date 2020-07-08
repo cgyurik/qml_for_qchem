@@ -22,7 +22,7 @@ from ansatz_functions.ucc_functions import (  # type: ignore
     generate_ucc_operator)
 from vqe_functions.vqe_optimize_functions import (  # type: ignore
     circuit_state_fidelity,
-    expectation_value_with_circuit_state)
+    circuit_state_expval)
 from utils.load_lib import (  # type: ignore
     load_data,
     load_ucc_data,
@@ -112,7 +112,7 @@ def optimize_ucc(
     print('Optimization time: {} minutes \n'
           .format((time.time() - stopwatch) / 60))
 
-    optimized_energy = expectation_value_with_circuit_state(
+    optimized_energy = circuit_state_expval(
         result['x'], circuit, parameter_dict,
         qubit_hamiltonian, simulator)
 

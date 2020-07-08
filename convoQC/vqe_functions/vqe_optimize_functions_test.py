@@ -13,7 +13,7 @@ from convoQC.ansatz_functions.ucc_functions import (
 )
 from .vqe_optimize_functions import (
     circuit_state_fidelity,
-    expectation_value_with_circuit_state)
+    circuit_state_expval)
 
 
 def get_molecule():
@@ -65,24 +65,29 @@ def test_raises():
     circuit.insert(0, cirq.X(cirq.LineQubit(0)))
     circuit.insert(0, cirq.X(cirq.LineQubit(1)))
 
-    start_parameters = [1.0, 0.0]
+    wrong_parameters = [1.0, 0.0]
 
     with pytest.raises(ValueError):
         circuit_state_fidelity(
-            start_parameters, circuit, param_dict,
+            wrong_parameters, circuit, param_dict,
             ground_state, simulator)
     with pytest.raises(ValueError):
-        expectation_value_with_circuit_state(
-            start_parameters, circuit, param_dict,
+        circuit_state_expval(
+            wrong_parameters, circuit, param_dict,
             qubit_hamiltonian, simulator)
-    new_start_params = numpy.zeros(len(param_dict))
+
+    params = numpy.zeros(len(param_dict))
     with pytest.raises(TypeError):
-        expectation_value_with_circuit_state(
-            new_start_params, circuit, param_dict,
-            mol_ham, simulator)
+        circuit_state_expval(params, circuit, param_dict, None, simulator)
+    with pytest.raises(TypeError):
+        circuit_state_expval(params, circuit, param_dict, numpy.array([[[0]]]),
+                             simulator)
+    with pytest.raises(TypeError):
+        circuit_state_expval(params, circuit, param_dict, mol_ham,
+                             simulator)
 
 
-def test_overlap_function():
+def test_circuit_state_fidelity():
     """Test for overlap circuit state."""
     molecule = get_molecule()
     mol_ham = molecule.get_molecular_hamiltonian()
@@ -124,10 +129,9 @@ def test_overlap_function():
         start_parameters, circuit, param_dict, ground_state,
         simulator)
     numpy.testing.assert_approx_equal(gs_overlap, 0.99, 2)
-    numpy.testing.assert_approx_equal(1 - gs_overlap, 0.0127, 3)
 
 
-def test_expectation_value_function():
+def test_circuit_state_expval():
     """Test for expectation value from circuit state."""
     molecule = get_molecule()
     mol_ham = molecule.get_molecular_hamiltonian()
@@ -153,13 +157,13 @@ def test_expectation_value_function():
     circuit.insert(0, cirq.X(cirq.LineQubit(1)))
 
     start_parameters = numpy.zeros(len(param_dict))
-    hf_expectation = expectation_value_with_circuit_state(
+    hf_expectation = circuit_state_expval(
         start_parameters, circuit, param_dict, qubit_hamiltonian, simulator)
 
     numpy.testing.assert_approx_equal(molecule.hf_energy, hf_expectation, 7)
 
     start_parameters = numpy.random.uniform(-numpy.pi,
                                             numpy.pi, len(param_dict))
-    expectation_value = expectation_value_with_circuit_state(
+    expectation_value = circuit_state_expval(
         start_parameters, circuit, param_dict, qubit_hamiltonian, simulator)
     assert expectation_value >= molecule.fci_energy
