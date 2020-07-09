@@ -11,7 +11,7 @@ from convoQC.scripts.optimize_ucc import optimize_ucc
 from convoQC.utils import load_ucc_data, DATA_DIR, encode_complex_and_array
 # pylint: enable=wrong-import-position
 
-UCC_REOPT_DIR = DATA_DIR + '/ucc_reoptimized'
+UCC_REOPT_DIR = DATA_DIR + 'ucc_reoptimized/'
 
 usage = ('Usage: python {} <target_filename> <init_params_filename>'
          .format(sys.argv[0]))
