@@ -1,10 +1,9 @@
 # a sandbox directory to try notebooks/scripts locally
 sandbox
 
-# SLURM output and jobs files
-.out
-.err
-.jobs
+# SLURM output and jobs folders
+out/
+jobs/
 
 # mac OSX junk
 .DS_store
