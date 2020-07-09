@@ -62,7 +62,7 @@ def optimize_ucc(
         filename: string representing the molecule geometry (see
             `notebooks/Guide_to_data`), without any extension or directory.
         initial_params: initial UCC optimization params. If None (default),
-            parameters are randomly extracted.
+            parameters are all set to zero (HF state).
         maxiter: the maximum number of iterations for the COBYLA optimizer
 
     Returns:
@@ -100,8 +100,7 @@ def optimize_ucc(
                 op, parameter_name='theta_' + str(i))))
 
     if initial_params is None:
-        rng = numpy.random.default_rng()
-        initial_params = rng.uniform(-numpy.pi, numpy.pi, len(parameter_dict))
+        initial_params = numpy.zeros(len(parameter_dict))
 
     def cost_function(params):
         return 1 - circuit_state_fidelity(params, circuit, parameter_dict,
