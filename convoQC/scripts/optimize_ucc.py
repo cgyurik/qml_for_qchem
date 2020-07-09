@@ -13,22 +13,28 @@ import scipy.optimize
 import openfermion
 import cirq
 
+# Relative imports from the package. This code is needed for the imports to
+# work even if this file is run as a script.
+
 # pylint: disable=wrong-import-position
-ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+ROOT_DIR = os.path.dirname(os.path.dirname(os.path.dirname(
+    os.path.abspath(__file__))))
 sys.path.append(ROOT_DIR)
-from ansatz_functions.ucc_functions import (  # type: ignore
+
+from convoQC.ansatz_functions.ucc_functions import (
     generate_ucc_amplitudes,
     generate_circuit_from_pauli_string,
     generate_ucc_operator)
-from vqe_functions.vqe_optimize_functions import (  # type: ignore
+from convoQC.vqe_functions.vqe_optimize_functions import (
     circuit_state_fidelity,
     circuit_state_expval)
-from utils.load_lib import (  # type: ignore
+from convoQC.utils import (
     load_data,
     load_ucc_data,
     MOLECULES_DIR,
-    UCC_DIR)
-from utils.generic import encode_complex_and_array  # type: ignore
+    UCC_DIR,
+    encode_complex_and_array)
+
 # pylint: enable=wrong-import-position
 
 
@@ -144,7 +150,6 @@ if __name__ == '__main__':
         ucc_dict = load_ucc_data(filename)
     else:
         ucc_dict = optimize_ucc(filename)
-        print(type(ucc_dict['optimizer_success']))
 
         print('saving data to file.')
         with open(UCC_DIR + filename + '.json', 'wt') as f:
