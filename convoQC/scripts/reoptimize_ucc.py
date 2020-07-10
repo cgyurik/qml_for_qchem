@@ -30,7 +30,7 @@ if (target_filename + '.json' in existing_ucc_reoptimized_files):
 source_ucc_dict = load_ucc_data(source_filename)
 init_params = source_ucc_dict['params']
 
-target_ucc_dict = optimize_ucc(target_filename, init_params, 10)
+target_ucc_dict = optimize_ucc(target_filename, init_params)
 
 print('saving data to file.')
 with open(UCC_REOPT_DIR + target_filename + '.json', 'wt') as f:
