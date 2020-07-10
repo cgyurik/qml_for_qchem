@@ -51,7 +51,7 @@ def get_molecule_data():
     return molecule
 
 
-def initialize_hf_state(n_electrons: int) -> Generator:
+def singlet_hf_generator(n_electrons: int) -> Generator:
     """Add X gate to qubits 0 to n_electrons."""
     yield cirq.X.on_each(cirq.LineQubit.range(n_electrons))
 
@@ -90,7 +90,7 @@ def main(*, n_electrons: int, n_orbitals: int) -> OptimizeResult:
     simulator = cirq.Simulator()
     parameter_dict = {}
     circuit = cirq.Circuit()
-    circuit.append(initialize_hf_state(n_electrons))
+    circuit.append(singlet_hf_generator(n_electrons))
     for i, op in enumerate(ucc_ferop):
         parameter_dict['theta_' + str(i)] = 0.0
         circuit.append(cirq.Circuit(

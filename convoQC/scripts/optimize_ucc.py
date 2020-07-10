@@ -45,9 +45,24 @@ def load_molecule(filename) -> openfermion.MolecularData:
     return molecule
 
 
-def initialize_hf_state(n_electrons: int) -> Generator:
-    """Add X gate to qubits 0 to n_electrons."""
+def singlet_hf_generator(n_electrons: int,
+                         n_orbitals: int) -> Generator:
+    """
+    Add X gate to qubits 0 to n_electrons.
+    """
     yield cirq.X.on_each(cirq.LineQubit.range(n_electrons))
+    yield cirq.I.on_each(cirq.LineQubit.range(n_electrons, 2 * n_orbitals))
+
+
+def triplet_hf_generator(n_electrons: int,
+                         n_orbitals: int) -> Generator:
+    """
+    Add X gate to qubits 0 to n_electrons.
+    """
+    yield cirq.X.on_each(cirq.LineQubit.range(n_electrons - 1))
+    yield cirq.I.on(cirq.LineQubit(n_electrons - 1))
+    yield cirq.X.on(cirq.LineQubit(n_electrons))
+    yield cirq.I.on_each(cirq.LineQubit.range(n_electrons + 1, 2 * n_orbitals))
 
 
 def optimize_ucc(
@@ -90,8 +105,11 @@ def optimize_ucc(
 
     simulator = cirq.Simulator()
     parameter_dict = {}
-    circuit = cirq.Circuit()
-    circuit.append(initialize_hf_state(molecule.n_electrons))
+    circuit = cirq.Circuit(
+        singlet_hf_generator(molecule.n_electrons, molecule.n_orbitals)
+        if molecule.multiplicity == 1 else
+        triplet_hf_generator(molecule.n_electrons, molecule.n_orbitals)
+    )
 
     for i, op in enumerate(ucc_ferop):
         parameter_dict['theta_' + str(i)] = 0.0
