@@ -111,8 +111,8 @@ def test_overlap_function():
         circuit.append(cirq.Circuit(
             generate_circuit_from_pauli_string(
                 op, parameter_name='theta_' + str(i))))
-    circuit.insert(0, cirq.X(cirq.LineQubit(0)))
-    circuit.insert(0, cirq.X(cirq.LineQubit(1)))
+    circuit.insert(0, cirq.X(cirq.GridQubit(1, 0)))
+    circuit.insert(0, cirq.X(cirq.GridQubit(1, 1)))
 
     start_parameters = numpy.zeros(len(param_dict))
 
@@ -152,8 +152,8 @@ def test_expectation_value_function():
         circuit.append(cirq.Circuit(
             generate_circuit_from_pauli_string(
                 op, parameter_name='theta_' + str(i))))
-    circuit.insert(0, cirq.X(cirq.LineQubit(0)))
-    circuit.insert(0, cirq.X(cirq.LineQubit(1)))
+    circuit.insert(0, cirq.X(cirq.GridQubit(1, 0)))
+    circuit.insert(0, cirq.X(cirq.GridQubit(1, 1)))
 
     start_parameters = numpy.zeros(len(param_dict))
     hf_expectation = expectation_value_with_circuit_state(
