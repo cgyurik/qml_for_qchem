@@ -7,7 +7,7 @@ import openfermion
 import cirq
 from .vqe_script import (
     get_molecule_data,
-    initialize_hf_state,
+    singlet_hf_generator,
     parse_arguments)
 
 
@@ -28,7 +28,7 @@ def test_get_molecule():
 @pytest.mark.parametrize('n_electrons', [2, 4, 6])
 def test_initialize_hf(n_electrons):
     """Test correct HF state circuit."""
-    circuit = cirq.Circuit(initialize_hf_state(n_electrons))
+    circuit = cirq.Circuit(singlet_hf_generator(n_electrons))
 
     assert len(circuit.all_qubits()) == n_electrons
 
@@ -38,6 +38,7 @@ def test_initialize_hf(n_electrons):
         list_of_xgates.append(operation[-1])
 
     assert len(list_of_xgates) == n_electrons
+
 
 def test_parse_arguments():
     """Test parsing arguments."""

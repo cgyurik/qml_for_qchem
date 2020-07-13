@@ -4,43 +4,20 @@ import json
 from itertools import combinations
 import numpy as np
 
-from scipy.sparse.linalg import eigsh
+import scipy.linalg
 import scipy.linalg
 
 from openfermion.hamiltonians import MolecularData
 from openfermion.transforms import get_sparse_operator
 from openfermionpsi4 import run_psi4
 
-# pylint: disable = wildcard-import
-from load_lib import *
-# pylint: enable = wildcard-import
+from .load_lib import MOLECULES_DIR, JSON_DIR, load_data
+from .generic import encode_complex_and_array, chop
 
 DMIN = 0.4
 DMAX = 1.5
 ROUNDING = 4
 DEFAULT_RNG = np.random.default_rng()
-
-
-def encode_complex_and_array(obj):
-    """
-    supplement for json.dump to be able to deal with complex numbers
-    and np.arrays.
-    """
-    if isinstance(obj, np.ndarray):
-        return(obj.tolist())
-
-    if isinstance(obj, complex):
-        return str(obj)
-    raise TypeError(f'Object of type {type(obj)} is not JSON serializable')
-
-
-def chop(array, abs_tol=1E-12):
-    """
-    Set to zero numerical zeros (values below abs_tol) in a np.array.
-    Acts in-place.
-    """
-    array[abs(array) < abs_tol] = 0
-    return array
 
 
 class FailedGeneration(Exception):
@@ -122,11 +99,11 @@ class MoleculeDataGenerator:
             os.path.exists(JSON_DIR + self.filename + '.json')
 
     def _solve_ground_states(self):
-        exact_energies, self.ground_states = eigsh(
-            get_sparse_operator(self.molecule.get_molecular_hamiltonian()),
-            k=self.molecule.multiplicity, which='SA'
+        eigenvalues, eigenstates = scipy.linalg.eigh(
+            get_sparse_operator(self.molecule.get_molecular_hamiltonian()).A
         )
-        self.exact_energy = exact_energies[0]
+        self.ground_states = eigenstates[:, :self.molecule.multiplicity]
+        self.exact_energy = eigenvalues[0]
         chop(self.ground_states)
 
     def _generate_molecule_unknown_multiplicity(self):
@@ -185,14 +162,15 @@ class MoleculeDataGenerator:
             ground_states=self.ground_states,
             hf_energy=self.molecule.hf_energy[()]
         )
-        with open(JSON_DIR + self.filename + '.json', 'wt') as f:
 
+        with open(JSON_DIR + self.filename + '.json', 'wt') as f:
             json.dump(self.data_dict, f, default=encode_complex_and_array)
 
-#### H4 family ####
+
+# *** H4 family ***
 
 
-def check_geometry(geometry):
+def check_geometry(geometry, dmin=DMIN, dmax=DMAX):
     """
     Check that the geometry respects the rules:
         - minimum distance of atom pairs (see DMIN for value)
@@ -201,14 +179,15 @@ def check_geometry(geometry):
     _, positions = list(zip(*geometry))
     for (i, pA), (j, pB) in combinations(enumerate(positions), 2):
         dist = np.sqrt(np.sum((np.array(pA) - np.array(pB))**2))
-        if dist < DMIN:  # no pair closer than dmin
+        if dist < dmin:  # no pair closer than dmin
             return False
-        if j == i+1 and dist > DMAX:  # no adjacent pair farther than dmax
+        if j == i + 1 and dist > dmax:  # no adjacent pair farther than dmax
             return False
     return True
 
 
-def H4_generate_random_geometry(rng=DEFAULT_RNG):
+def H4_generate_random_geometry(rng=DEFAULT_RNG,
+                                dmin=DMIN, dmax=DMAX, rounding=ROUNDING):
     '''
     Generate random geometry for H4 of form
     (
@@ -217,26 +196,28 @@ def H4_generate_random_geometry(rng=DEFAULT_RNG):
         ('H', (x2, y2, 0 )),
         ('H', (x3, y3, z3))
     )
+    with all values rounded to `rounding` digits
     '''
     geometry = [('H', (0., 0., 0.))]
-    x1 = round(rng.uniform(DMIN, DMAX), ROUNDING)
+    x1 = round(rng.uniform(dmin, dmax), rounding)
     geometry.append(('H', (x1, 0., 0.)))
-    r2 = rng.uniform(DMIN, DMAX)
-    theta2 = rng.uniform(0, 2*np.pi)
-    x2 = round(np.cos(theta2) * r2, ROUNDING)
-    y2 = round(np.sin(theta2) * r2, ROUNDING)
+    r2 = rng.uniform(dmin, dmax)
+    theta2 = rng.uniform(0, 2 * np.pi)
+    x2 = round(np.cos(theta2) * r2, rounding)
+    y2 = round(np.sin(theta2) * r2, rounding)
     geometry.append(('H', (x2, y2, 0.)))
     phi3 = np.arcsin(rng.uniform(-1, 1))
-    theta3 = rng.uniform(0, 2*np.pi)
-    r3 = rng.uniform(DMIN, DMAX)
-    x3 = round(r3 * np.cos(phi3) * np.cos(theta3), ROUNDING)
-    y3 = round(r3 * np.cos(phi3) * np.sin(theta3), ROUNDING)
-    z3 = round(r3 * np.sin(phi3), ROUNDING)
+    theta3 = rng.uniform(0, 2 * np.pi)
+    r3 = rng.uniform(dmin, dmax)
+    x3 = round(r3 * np.cos(phi3) * np.cos(theta3), rounding)
+    y3 = round(r3 * np.cos(phi3) * np.sin(theta3), rounding)
+    z3 = round(r3 * np.sin(phi3), rounding)
     geometry.append(('H', (x3, y3, z3)))
     return geometry
 
 
-def H4_generate_valid_geometry(rng=DEFAULT_RNG):
+def H4_generate_valid_geometry(rng=DEFAULT_RNG,
+                               dmin=DMIN, dmax=DMAX, rounding=ROUNDING):
     """
     Generate valid random geomertry for H4.
     For detailed help see:
@@ -244,24 +225,38 @@ def H4_generate_valid_geometry(rng=DEFAULT_RNG):
         `check_geometry`
     """
     while True:
-        geometry = H4_generate_random_geometry(rng)
-        if check_geometry(geometry):
+        geometry = H4_generate_random_geometry(rng, dmin, dmax, rounding)
+        if check_geometry(geometry, dmin, dmax):
             return geometry
         else:
             # print('Invalid geometry. Retrying...')
             pass
 
 
-def H4_generate_random_molecule(rng=DEFAULT_RNG):
+def H4_generate_random_molecule(rng: np.random.Generator = DEFAULT_RNG,
+                                dmin: float = DMIN,
+                                dmax: float = DMAX,
+                                rounding: int = ROUNDING):
     """
     Generate and save molecule and data for a valid random geomertry of H4.
-    For detailed help see:
-        `H4_generate_valid_geometry`
-        `check_geometry`
-        `MoleculeDataGenerator`
+
+    The molecule geometry is of the form:
+    (
+        ('H', (0 , 0 , 0 )),
+        ('H', (x1, 0 , 0 )),
+        ('H', (x2, y2, 0 )),
+        ('H', (x3, y3, z3))
+    )
+    with the additional constraints:
+        - `dmin` minimum distance of atom pairs
+        - `dmax` maximum distance of adjacent atoms
+    and all values rounded to `rounding` digits
 
     Args:
         rng: a numpy.random generator
+        dmin: minimum distance between each pair of atoms
+        dmax: maximum distance between adjacent atoms
+        rounding: number of digits to which all positions are rounded
 
     Returns:
         MoleculeDataGenerator
@@ -269,4 +264,4 @@ def H4_generate_random_molecule(rng=DEFAULT_RNG):
     Raises:
         FailedGeneration
     """
-    return MoleculeDataGenerator(H4_generate_valid_geometry(rng))
+    return MoleculeDataGenerator(H4_generate_valid_geometry(rng, dmin, dmax))

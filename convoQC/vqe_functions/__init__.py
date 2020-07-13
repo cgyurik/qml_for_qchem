@@ -1,5 +1,5 @@
 """"Initialize init."""
 
 from .vqe_optimize_functions import (
-    overlap_with_circuit_state,
-    expectation_value_with_circuit_state)
+    circuit_state_fidelity,
+    circuit_state_expval)

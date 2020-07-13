@@ -18,7 +18,7 @@ try:
         generate_circuit_from_pauli_string,
         generate_ucc_operator)
     from convoQC.vqe_functions.vqe_optimize_functions import (
-        overlap_with_circuit_state)
+        circuit_state_fidelity)
 except Exception:
     sys.path.insert(0, os.getcwd() + '/../')
     from ansatz_functions.ucc_functions import (  # type: ignore
@@ -26,8 +26,8 @@ except Exception:
         generate_circuit_from_pauli_string,
         generate_ucc_operator)
     from vqe_functions.vqe_optimize_functions import (  # type: ignore
-        overlap_with_circuit_state,
-        expectation_value_with_circuit_state)
+        circuit_state_fidelity,
+        circuit_state_expval)
 
 
 def get_molecule_data():
@@ -51,7 +51,7 @@ def get_molecule_data():
     return molecule
 
 
-def initialize_hf_state(n_electrons: int) -> Generator:
+def singlet_hf_generator(n_electrons: int) -> Generator:
     """Add X gate to qubits 0 to n_electrons."""
     yield cirq.X.on_each(cirq.LineQubit.range(n_electrons))
 
@@ -84,14 +84,13 @@ def main(*, n_electrons: int, n_orbitals: int) -> OptimizeResult:
     # pylint: enable = unused-variable
     ground_state = eigvecs[:, 0]
 
-    singles, doubles = generate_ucc_amplitudes(
-        n_electrons, n_orbitals)
+    singles, doubles = generate_ucc_amplitudes(n_electrons, n_orbitals)
     ucc_ferop = generate_ucc_operator(singles, doubles)
 
     simulator = cirq.Simulator()
     parameter_dict = {}
     circuit = cirq.Circuit()
-    circuit.append(initialize_hf_state(n_electrons))
+    circuit.append(singlet_hf_generator(n_electrons))
     for i, op in enumerate(ucc_ferop):
         parameter_dict['theta_' + str(i)] = 0.0
         circuit.append(cirq.Circuit(
@@ -101,13 +100,13 @@ def main(*, n_electrons: int, n_orbitals: int) -> OptimizeResult:
                                             len(parameter_dict))
 
     result = minimize(
-        overlap_with_circuit_state,
+        lambda *x: 1 - circuit_state_fidelity(*x),
         x0=(start_parameters),
         args=(circuit, parameter_dict, ground_state, simulator, False),
         options={'maxiter': 2000},
         method='COBYLA')
 
-    optimized_energy = expectation_value_with_circuit_state(
+    optimized_energy = circuit_state_expval(
         result['x'], circuit, parameter_dict,
         qubit_hamiltonian, simulator)
     return result, optimized_energy
