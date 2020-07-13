@@ -2,8 +2,7 @@
 sandbox
 
 # SLURM output and jobs folders
-out/
-jobs/
+SLURM/
 
 # mac OSX junk
 .DS_store
