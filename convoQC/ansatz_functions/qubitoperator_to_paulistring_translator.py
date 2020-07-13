@@ -1,11 +1,11 @@
 """Functions to translate QubitOperators to PauliString."""
-
 import cirq
 from openfermion import QubitOperator
 
 
 def qubitoperator_to_pauli_string(
-        qubit_op: QubitOperator) -> cirq.PauliString:
+        qubit_op: QubitOperator,
+        parameter: float=None) -> cirq.PauliString:
     """
     Convert QubitOperator to Pauli String.
 
@@ -25,10 +25,14 @@ def qubitoperator_to_pauli_string(
         raise ValueError('Input has more than one Pauli string.')
 
     pauli_string = cirq.PauliString()
-    for ind_ops, coeff in qubit_op.terms.items():
+
+    if parameter is None:
+        parameter = list(qubit_op.terms.values())[0]
+
+    for ind_ops in qubit_op.terms.keys():
 
         if ind_ops == ():
-            return pauli_string * coeff
+            return pauli_string * parameter
 
         else:
             for ind, op in ind_ops:
@@ -39,9 +43,9 @@ def qubitoperator_to_pauli_string(
                 elif op == 'Z':
                     op = cirq.Z
 
-                pauli_string *= op(cirq.LineQubit(ind))
+                pauli_string *= op(cirq.GridQubit(1, ind))
 
-    return pauli_string * coeff
+    return pauli_string * parameter
 
 
 def qubitoperator_to_pauli_sum(qubit_op: QubitOperator) -> cirq.PauliSum:
