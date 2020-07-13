@@ -57,8 +57,7 @@ def generate_ucc_amplitudes(n_electrons: Union[int, float],
 
             for two_el in range(one_el, n_electrons):
                 for two_unocc_orb in range(unocc_orb, n_spin_orbitals):
-                    if ((two_unocc_orb != unocc_orb) and
-                            (two_el != one_el)):
+                    if ((two_unocc_orb != unocc_orb) and (two_el != one_el)):
                         double_amplitudes.append(
                             [[two_unocc_orb, two_el, unocc_orb, one_el], 1.0])
 
@@ -128,10 +127,10 @@ def generate_ucc_amplitudes_spin_conserved(
 
     for i in range(int(len(even_singles) / 2)):
         for j in range(i + int(len(even_singles) / 2) + 1, len(even_singles)):
-            double_amplitudes.append([list(even_singles[i]) +
-                                      list(even_singles[j]), 1.0])
-            double_amplitudes.append([list(odd_singles[i]) +
-                                      list(odd_singles[j]), 1.0])
+            double_amplitudes.append([list(even_singles[i])
+                                      + list(even_singles[j]), 1.0])
+            double_amplitudes.append([list(odd_singles[i])
+                                      + list(odd_singles[j]), 1.0])
 
     return single_amplitudes, double_amplitudes
 

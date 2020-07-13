@@ -5,7 +5,6 @@ from itertools import combinations
 import numpy as np
 
 import scipy.linalg
-import scipy.linalg
 
 from openfermion.hamiltonians import MolecularData
 from openfermion.transforms import get_sparse_operator
