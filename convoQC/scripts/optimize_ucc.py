@@ -24,7 +24,7 @@ sys.path.append(ROOT_DIR)
 from convoQC.ansatz_functions.ucc_functions import (
     generate_ucc_amplitudes,
     generate_circuit_from_pauli_string,
-    generate_ucc_operator)
+    generate_ucc_operators)
 from convoQC.vqe_functions.vqe_optimize_functions import (
     circuit_state_fidelity,
     circuit_state_expval)
@@ -50,8 +50,10 @@ def singlet_hf_generator(n_electrons: int,
     """
     Add X gate to qubits 0 to n_electrons.
     """
-    yield cirq.X.on_each(cirq.LineQubit.range(n_electrons))
-    yield cirq.I.on_each(cirq.LineQubit.range(n_electrons, 2 * n_orbitals))
+    for i in range(n_electrons):
+        yield cirq.X(cirq.GridQubit(1, i))
+    for i in range(n_electrons, 2 * n_orbitals):
+        yield cirq.I(cirq.GridQubit(1, i))
 
 
 def triplet_hf_generator(n_electrons: int,
@@ -59,10 +61,12 @@ def triplet_hf_generator(n_electrons: int,
     """
     Add X gate to qubits 0 to n_electrons.
     """
-    yield cirq.X.on_each(cirq.LineQubit.range(n_electrons - 1))
-    yield cirq.I.on(cirq.LineQubit(n_electrons - 1))
-    yield cirq.X.on(cirq.LineQubit(n_electrons))
-    yield cirq.I.on_each(cirq.LineQubit.range(n_electrons + 1, 2 * n_orbitals))
+    for i in range(n_electrons - 1):
+        yield cirq.X.on_each(cirq.GridQubit(1, i))
+    yield cirq.I.on(cirq.GridQubit(1, n_electrons - 1))
+    yield cirq.X.on(cirq.GridQubit(1, n_electrons))
+    for i in range(n_electrons + 1, 2 * n_orbitals):
+        yield cirq.I.on_each(cirq.GridQubit(1, i))
 
 
 def optimize_ucc(
@@ -101,7 +105,7 @@ def optimize_ucc(
 
     singles, doubles = generate_ucc_amplitudes(molecule.n_electrons,
                                                2 * molecule.n_orbitals)
-    ucc_ferop = generate_ucc_operator(singles, doubles)
+    ucc_ferop = generate_ucc_operators(singles, doubles)
 
     simulator = cirq.Simulator()
     parameter_dict = {}

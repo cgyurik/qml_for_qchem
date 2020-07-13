@@ -8,5 +8,5 @@ from .qubitoperator_to_paulistring_translator import (
 from .ucc_functions import (
     generate_ucc_amplitudes,
     generate_ucc_amplitudes_spin_conserved,
-    generate_ucc_operator,
+    generate_ucc_operators,
     generate_circuit_from_pauli_string)
