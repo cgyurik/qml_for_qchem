@@ -9,7 +9,7 @@ import openfermion
 from .ucc_functions import (
     generate_ucc_amplitudes,
     generate_ucc_amplitudes_spin_conserved,
-    generate_ucc_operator,
+    generate_ucc_operators,
     generate_circuit_from_pauli_string)
 
 
@@ -43,10 +43,10 @@ def test_correct_number_amplitudes(n_elec, n_orbs):
     assert len(doubles) >= len(doubles_spin)
 
 
-def test_generate_ucc_operator():
+def test_generate_ucc_operators():
     """Test generate ucc operator function."""
     singles, doubles = generate_ucc_amplitudes(2, 4)
-    ucc_ops_list = generate_ucc_operator(singles, doubles)
+    ucc_ops_list = generate_ucc_operators(singles, doubles)
 
     assert len(ucc_ops_list[3].terms) == 2
     assert len(ucc_ops_list) == (len(singles) + len(doubles))
@@ -65,7 +65,7 @@ def test_generate_circuit_raises():
 def test_correct_number_moment():
     """Test circuit has correct number of moments."""
     singles, doubles = generate_ucc_amplitudes_spin_conserved(2, 4)
-    ucc_ops_list = generate_ucc_operator(singles, doubles)
+    ucc_ops_list = generate_ucc_operators(singles, doubles)
 
     circuit_single = cirq.Circuit(
         generate_circuit_from_pauli_string(ucc_ops_list[0],

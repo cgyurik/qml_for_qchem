@@ -13,7 +13,7 @@ from .qubitoperator_to_paulistring_translator import (  # type: ignore
 
 
 def generate_ucc_amplitudes(n_electrons: Union[int, float],
-                            n_orbitals: Union[int, float],) -> Sequence:
+                            n_spin_orbitals: Union[int, float],) -> Sequence:
     """
     Create lists of amplidues to generate UCC operators.
 
@@ -22,7 +22,7 @@ def generate_ucc_amplitudes(n_electrons: Union[int, float],
 
     Args:
         n_electrons (int): Number of electrons.
-        n_orbitals (int): Number of spin-orbitals,
+        n_spin_orbitals (int): Number of spin-orbitals,
             equivalent to number of qubits.
 
     Returns:
@@ -30,8 +30,8 @@ def generate_ucc_amplitudes(n_electrons: Union[int, float],
             and double amplitudes as [[i,j], t_ij, [k,l], t_kl]
 
     Raises:
-        TypeError: if n_electrons or n_orbitals is not integer or float.
-        ValueError: if n_electrons is greater than n_orbitals.
+        TypeError: if n_electrons or n_spin_orbitals is not integer or float.
+        ValueError: if n_electrons is greater than n_spin_orbitals.
 
     Notes:
         Assigns value 1 to each amplitude.
@@ -40,11 +40,11 @@ def generate_ucc_amplitudes(n_electrons: Union[int, float],
         n_electrons = int(n_electrons)
     else:
         raise TypeError('Electrons must be a number.')
-    if isinstance(n_orbitals, (int, float)):
-        n_orbitals = int(n_orbitals)
+    if isinstance(n_spin_orbitals, (int, float)):
+        n_spin_orbitals = int(n_spin_orbitals)
     else:
         raise TypeError('Orbitals must be a number.')
-    if n_electrons > n_orbitals:
+    if n_electrons > n_spin_orbitals:
         raise ValueError(
             'Number of electrons can not be greater than orbitals.')
 
@@ -52,13 +52,12 @@ def generate_ucc_amplitudes(n_electrons: Union[int, float],
     double_amplitudes = []
 
     for one_el in range(0, n_electrons):
-        for unocc_orb in range(n_electrons, n_orbitals):
+        for unocc_orb in range(n_electrons, n_spin_orbitals):
             single_amplitudes.append([[unocc_orb, one_el], 1.0])
 
             for two_el in range(one_el, n_electrons):
-                for two_unocc_orb in range(unocc_orb, n_orbitals):
-                    if ((two_unocc_orb != unocc_orb) and
-                            (two_el != one_el)):
+                for two_unocc_orb in range(unocc_orb, n_spin_orbitals):
+                    if ((two_unocc_orb != unocc_orb) and (two_el != one_el)):
                         double_amplitudes.append(
                             [[two_unocc_orb, two_el, unocc_orb, one_el], 1.0])
 
@@ -67,16 +66,16 @@ def generate_ucc_amplitudes(n_electrons: Union[int, float],
 
 def generate_ucc_amplitudes_spin_conserved(
         n_electrons: Union[int, float],
-        n_orbitals: Union[int, float]) -> Sequence:
+        n_spin_orbitals: Union[int, float]) -> Sequence:
     """
     Create list of amplitudes to generate UCC operators.
 
     Currently this function only allows for even n_electrons,
-    and n_orbitals!
+    and n_spin_orbitals!
 
     Args:
         n_electrons (int): Number of electrons.
-        n_orbitals (int): Number of spin-orbitals,
+        n_spin_orbitals (int): Number of spin-orbitals,
              equivalent to number of qubits.
 
     Returns:
@@ -84,8 +83,8 @@ def generate_ucc_amplitudes_spin_conserved(
             and double amplitudes as [[i,j], t_ij, [k,l], t_kl]
 
     Raises:
-        TypeError: if n_electrons or n_orbitals is not integer or float.
-        ValueError: if n_electrons is greater than n_orbitals.
+        TypeError: if n_electrons or n_spin_orbitals is not integer or float.
+        ValueError: if n_electrons is greater than n_spin_orbitals.
 
     Notes:
         Assigns value 1 to each amplitude.
@@ -94,18 +93,18 @@ def generate_ucc_amplitudes_spin_conserved(
         n_electrons = int(n_electrons)
     else:
         raise TypeError('Electrons must be a number.')
-    if isinstance(n_orbitals, (int, float)):
-        n_orbitals = int(n_orbitals)
+    if isinstance(n_spin_orbitals, (int, float)):
+        n_spin_orbitals = int(n_spin_orbitals)
     else:
         raise TypeError('Orbitals must be a number.')
-    if n_electrons > n_orbitals:
+    if n_electrons > n_spin_orbitals:
         raise ValueError(
             'Number of electrons can not be greater than orbitals.')
 
     occ_orbs_even = range(0, n_electrons, 2)
-    unocc_orbs_even = range(n_electrons, n_orbitals, 2)
+    unocc_orbs_even = range(n_electrons, n_spin_orbitals, 2)
     occ_orbs_odd = range(1, n_electrons + 1, 2)
-    unocc_orbs_odd = range(n_electrons + 1, n_orbitals + 1, 2)
+    unocc_orbs_odd = range(n_electrons + 1, n_spin_orbitals + 1, 2)
 
     single_amplitudes = []
     double_amplitudes = []
@@ -128,15 +127,15 @@ def generate_ucc_amplitudes_spin_conserved(
 
     for i in range(int(len(even_singles) / 2)):
         for j in range(i + int(len(even_singles) / 2) + 1, len(even_singles)):
-            double_amplitudes.append([list(even_singles[i]) +
-                                      list(even_singles[j]), 1.0])
-            double_amplitudes.append([list(odd_singles[i]) +
-                                      list(odd_singles[j]), 1.0])
+            double_amplitudes.append([list(even_singles[i])
+                                      + list(even_singles[j]), 1.0])
+            double_amplitudes.append([list(odd_singles[i])
+                                      + list(odd_singles[j]), 1.0])
 
     return single_amplitudes, double_amplitudes
 
 
-def generate_ucc_operator(
+def generate_ucc_operators(
         single_amplitudes: Sequence,
         double_amplitudes: Sequence) -> List[Any]:
     """

@@ -8,7 +8,7 @@ import openfermion
 
 from convoQC.ansatz_functions.ucc_functions import (
     generate_ucc_amplitudes,
-    generate_ucc_operator,
+    generate_ucc_operators,
     generate_circuit_from_pauli_string
 )
 from .vqe_optimize_functions import (
@@ -51,8 +51,8 @@ def test_raises():
     ground_state = eigvecs[:, 0]
 
     sing, doubs = generate_ucc_amplitudes(
-        n_electrons=2, n_orbitals=4)
-    ucc_ops = generate_ucc_operator(sing, doubs)
+        n_electrons=2, n_spin_orbitals=4)
+    ucc_ops = generate_ucc_operators(sing, doubs)
 
     simulator = cirq.Simulator()
     circuit = cirq.Circuit()
@@ -105,8 +105,8 @@ def test_circuit_state_fidelity():
     hf_state[12] = 1.0
 
     sing, doubs = generate_ucc_amplitudes(
-        n_electrons=2, n_orbitals=4)
-    ucc_ops = generate_ucc_operator(sing, doubs)
+        n_electrons=2, n_spin_orbitals=4)
+    ucc_ops = generate_ucc_operators(sing, doubs)
 
     simulator = cirq.Simulator()
     circuit = cirq.Circuit()
@@ -142,8 +142,8 @@ def test_circuit_state_expval():
     hf_state[12] = 1.0
 
     sing, doubs = generate_ucc_amplitudes(
-        n_electrons=2, n_orbitals=4)
-    ucc_ops = generate_ucc_operator(sing, doubs)
+        n_electrons=2, n_spin_orbitals=4)
+    ucc_ops = generate_ucc_operators(sing, doubs)
 
     simulator = cirq.Simulator()
     circuit = cirq.Circuit()
