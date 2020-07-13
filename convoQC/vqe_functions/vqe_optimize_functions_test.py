@@ -51,7 +51,7 @@ def test_raises():
     ground_state = eigvecs[:, 0]
 
     sing, doubs = generate_ucc_amplitudes(
-        n_electrons=2, n_orbitals=4)
+        n_electrons=2, n_spin_orbitals=4)
     ucc_ops = generate_ucc_operators(sing, doubs)
 
     simulator = cirq.Simulator()
@@ -105,7 +105,7 @@ def test_circuit_state_fidelity():
     hf_state[12] = 1.0
 
     sing, doubs = generate_ucc_amplitudes(
-        n_electrons=2, n_orbitals=4)
+        n_electrons=2, n_spin_orbitals=4)
     ucc_ops = generate_ucc_operators(sing, doubs)
 
     simulator = cirq.Simulator()
@@ -142,7 +142,7 @@ def test_circuit_state_expval():
     hf_state[12] = 1.0
 
     sing, doubs = generate_ucc_amplitudes(
-        n_electrons=2, n_orbitals=4)
+        n_electrons=2, n_spin_orbitals=4)
     ucc_ops = generate_ucc_operators(sing, doubs)
 
     simulator = cirq.Simulator()
