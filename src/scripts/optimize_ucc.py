@@ -21,14 +21,14 @@ ROOT_DIR = os.path.dirname(os.path.dirname(os.path.dirname(
     os.path.abspath(__file__))))
 sys.path.append(ROOT_DIR)
 
-from convoQC.ansatz_functions.ucc_functions import (
+from src.ansatz_functions.ucc_functions import (
     generate_ucc_amplitudes,
     generate_circuit_from_pauli_string,
     generate_ucc_operators)
-from convoQC.vqe_functions.vqe_optimize_functions import (
+from src.vqe_functions.vqe_optimize_functions import (
     circuit_state_fidelity,
     circuit_state_expval)
-from convoQC.utils import (
+from src.utils import (
     load_data,
     load_ucc_data,
     MOLECULES_DIR,

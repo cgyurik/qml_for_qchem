@@ -1,0 +1,166 @@
+"""
+    quantum_model_dual = tfq.layers.PQC(pqc, readouts)(input_layer)
+
+    d1_dual = tf.keras.layers.Dense(len(qubits))(quantum_model_dual)
+
+    d2_dual = tf.keras.layers.Dense(1)(d1_dual)
+
+    hybrid_model = tf.keras.Model(inputs=[input_layer], outputs=[d2_dual])
+""" 
+
+"""
+    Create the quantum model.
+"""
+
+"""
+    def create_quantum_model(qubits, readouts, n_var_qubits=2, n_ham_qubits=2, n_reuploads=2, var_depth=2,
+                                plot_to_file=False):
+        input_layer = tf.keras.Input(shape=(), dtype=tf.dtypes.string)
+        pqc = create_model_circuit(qubits, n_var_qubits=n_var_qubits, n_ham_qubits=n_ham_qubits, 
+                                    n_reuploads=2, var_depth=2)
+        print(pqc.to_text_diagram(transpose=True))
+        pqc_layer = tfq.layers.PQC(pqc, readouts)(input_layer)
+        qcnn_model = tf.keras.Model(inputs=[input_layer], outputs=[pqc_layer])
+
+        if plot_to_file:        
+            tf.keras.utils.plot_model(qcnn_model,
+                                      to_file='qml_quantum.png',
+                                      show_shapes=True,
+                                      show_layer_names=False,    
+                                      dpi=70)
+
+        return qcnn_model
+"""
+
+"""
+    # The quantum model
+    readouts = cirq.Z(qubits[-1])
+    qcnn_model = create_quantum_model(qubits, readouts, n_var_qubits=n_var_qubits, n_ham_qubits=n_ham_qubits, 
+                                        n_reuploads=n_reuploads, plot_to_file=False)
+"""
+
+"""
+    n_qubits = ( n_reuploads * n_ham_qubits ) + n_var_qubits
+    qubits = cirq.GridQubit.rect(1, n_qubits)
+
+    ## Setting up the model.
+    readouts = [cirq.Z(bit) for bit in qubits[:int(len(qubits) / 2)]]
+"""
+
+"""
+    """
+    Generate placeholder dataset
+    """
+    def generate_foo_data(self):
+        ## Generating all data.
+        groundstate_circuits = []
+        classical_inputs = []
+        labels = []    
+        for j in range(2 ** self.n_ham_qubits):
+            circuit = cirq.Circuit()
+            bits = [int(x) for x in '{:0{size}b}'.format(j,size=self.n_ham_qubits)]
+            for reupload in range(self.n_reuploads):
+                upload_layer = [cirq.X(self.qubits[(reupload * self.n_ham_qubits) + i]) ** bits[i] 
+                                for i in range(self.n_ham_qubits)]
+                circuit.append(upload_layer)
+            groundstate_circuits.append(circuit)
+            classical_inputs.append(j)
+            labels.append( float(j) / float(2 ** self.n_ham_qubits) )
+
+        ## Dividing into training and test.
+        # Shuffeling
+        d = list(zip(groundstate_circuits, classical_inputs, labels))
+        random.shuffle(d)
+        a, b , c = zip(*d)
+        groundstate_circuits = list(a)
+        classical_inputs = list(b)
+        labels = list(c)   
+        # Spliting
+        split_ind = int(len(labels) * 0.7)
+        train_groundstate_circuits = groundstate_circuits[:split_ind]
+        test_groundstate_circuits = groundstate_circuits[split_ind:]
+        train_classical_inputs = classical_inputs[:split_ind]
+        test_classical_inputs = classical_inputs[split_ind:]
+        train_labels = labels[:split_ind]
+        test_labels = labels[split_ind:]
+
+        return tfq.convert_to_tensor(train_groundstate_circuits), np.array(train_classical_inputs), \
+                tfq.convert_to_tensor(test_groundstate_circuits), np.array(test_classical_inputs), \
+                np.array(train_labels), np.array(test_labels)
+"""
+
+"""
+    n_ham_qubits = 8
+    dataset = [load_lib.load_data(filename) 
+               for filename in os.listdir(load_lib.JSON_DIR)
+               if filename.endswith('.json')]
+    datapoint = dataset[15]
+
+    ## Classical input
+    # Geometry.
+    print("Geometry:")
+    geometry = np.array([datapoint['geometry'][i][1] for i in range(4)])
+    geometry = np.transpose(geometry)
+    print( geometry )
+    print(geometry.shape)
+    # Canonical orbitals
+    print("Canonical orbitals:")
+    canonical_orbitals = np.array(datapoint['canonical_orbitals'])
+    print ( canonical_orbitals )
+    print ( canonical_orbitals.shape )
+    # Orbital energies
+    print("Orbital energies:")
+    orbital_energies = np.array(datapoint['orbital_energies'])
+    print ( orbital_energies )
+    print ( orbital_energies.shape )
+    # Canonical to orthogonal atomic orbitals (OAO)
+    print("Canonical to orthogonal atomic orbitals (OAO):")
+    canonical_to_oao = np.array(datapoint['canonical_to_oao'])
+    print ( canonical_to_oao )
+    print ( canonical_to_oao.shape )
+    # Concatenate attempt
+    print("Stacking all of the above")
+    classical_input = np.vstack((geometry, canonical_orbitals, orbital_energies, canonical_to_oao))
+    print( np.vstack((geometry, canonical_orbitals, orbital_energies, canonical_to_oao)) )
+    print( classical_input.shape ) 
+    ## Quantum input
+    # Groundstate(s)
+    for j in range(datapoint['multiplicity']):
+        print("Groundstate", j)
+        print( np.array([datapoint['ground_states'][i][j] for i in range(2 ** n_ham_qubits)]).shape )
+
+    ## Labels.
+    # Exact energy
+    print("Exact energy:", datapoint['exact_energy'])
+"""
+
+"""
+    ## Gram Schmidt.
+        n = len(A)
+        A[:, 0] = normalize(A[:, 0])
+        for i in range(1, n):
+            Ai = A[:, i]
+            for j in range(0, i):
+                Aj = A[:, j]
+                t = np.vdot(Ai, Aj)
+                Ai = Ai - t * Aj
+            A[:, i] = normalize(Ai)
+        return A
+
+    """
+    Normalizes the (complex) vector v.
+    """
+    def normalize(v):
+        return v / np.sqrt(np.vdot(v, v))
+"""
+
+"""
+    # HF approximation of groundstate.    
+            hf_circuit = cirq.Circuit()
+            hf_state = [1, 1, 1, 1, 0, 0, 0, 0]
+            for reupload in range(self.n_reuploads):
+                upload_layer = [cirq.X(self.qubits[(reupload * self.n_ham_qubits) + i]) ** hf_state[i] 
+                                    for i in range(self.n_ham_qubits)]
+                hf_circuit.append(upload_layer)
+            groundstate_circuits = [hf_circuit for j in range(len(dataset))]
+"""
