@@ -164,3 +164,19 @@
                 hf_circuit.append(upload_layer)
             groundstate_circuits = [hf_circuit for j in range(len(dataset))]
 """
+
+"""
+        ## HF approximation of groundstate.    
+        hf_circuit = cirq.Circuit()
+        hf_state = [1, 1, 1, 1, 0, 0, 0, 0]
+        # if parallel, tfq seems to copy qubits, hence no need to prepare groundstates on different qubits.
+        if self.intermediate_readouts:
+            upload_layer = [cirq.X(self.qubits[i]) ** hf_state[i] for i in range(self.n_ham_qubits)]         
+        # else, initialize load all n_reuploads groundstates on the respective qubits.           
+        else:
+            for reupload in range(self.n_reuploads):
+                upload_layer = [cirq.X(self.qubits[(reupload * self.n_ham_qubits) + i]) ** hf_state[i] 
+                                        for i in range(self.n_ham_qubits)]
+                hf_circuit.append(upload_layer)
+        groundstate_circuits = [hf_circuit for j in range(len(dataset))]
+        """

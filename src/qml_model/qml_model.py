@@ -25,9 +25,15 @@ from src.utils.tfq_utils import tensorable_ucc_circuit
 """
 
 """
+[TFQ meeting]
+    - Contribute H4 dataset?
+    - 
+"""
+
+"""
 [TODO]    
+    - Deal with RAM-issues (?)
     - Reinitialize ham_qubits in groundstate when reuploading (i.e., use fewer qubits in serial model).
-    - Input 'ground_state' into 'pqc layer {wait for Xavi & Stefano}.
     - Q: does every parallel pqc need its own qubit register to operate on {QCNN tutorial: no}?
 """
 
@@ -59,14 +65,20 @@ class qml_model():
         self.readouts = [cirq.Z(bit) for bit in self.qubits[-self.n_var_qubits:]]       
         
         ## Reading H4 data
+        print("Loading data.")
         self.train_groundstates, self.train_classical_inputs, \
         self.test_groundstates, self.test_classical_inputs, \
         self.train_labels, self.test_labels = self.load_dataset(data)
         
         ## Initializing components of the model.    
+        print("Setting up components of the model.")
+        print("  - pqc.")        
         self.pqc = self.create_model_circuit(print_circuit=print_circuit)
+        print("  - controller nn.")        
         self.controller_nn = self.create_controller_nn()
+        print("  - postprocess nn.")  
         self.postprocess_nn = self.create_postprocess_nn()
+        print("Connecting components of the model.")
         self.tfq_model = self.create_tfq_model(print_summary=print_summary, plot_to_file=plot_to_file)
 
 
@@ -237,17 +249,29 @@ class qml_model():
         # Loading generated dataset.
         with open(data, 'rb') as f:
             dataset = pickle.load(open(data, 'rb'))
+        datasize = 5
+        dataset = dataset[:datasize]
+
+        ## Dividing into training and test.
+        # Shuffeling dataset
+        random.shuffle(dataset)
+        # Spliting
+        split_ind = int(len(dataset) * 0.7)
+        train_data = dataset[:split_ind]
+        test_data = dataset[split_ind:]
         
+        ## Training data
+        print("Processing training data.")
         # Parsing classical input.
-        classical_inputs = []
-        for i in range(len(dataset)):
+        train_classical_inputs = []
+        for i in range(len(train_data)):
             # Only include molecules with groundstate degeneracy 1.
-            if dataset[i]['multiplicity'] == 3:
+            if train_data[i]['multiplicity'] == 3:
                 continue
-            geometry = np.transpose(np.array([dataset[i]['geometry'][j][1] for j in range(4)]))
-            canonical_orbitals = np.array(dataset[i]['canonical_orbitals'])
-            orbital_energies = np.array(dataset[i]['orbital_energies'])
-            canonical_to_oao = np.array(dataset[i]['canonical_to_oao'])    
+            geometry = np.transpose(np.array([train_data[i]['geometry'][j][1] for j in range(4)]))
+            canonical_orbitals = np.array(train_data[i]['canonical_orbitals'])
+            orbital_energies = np.array(train_data[i]['orbital_energies'])
+            canonical_to_oao = np.array(train_data[i]['canonical_to_oao'])    
             classical_input = np.vstack((
                                             geometry, 
                                             #canonical_orbitals, 
@@ -255,53 +279,56 @@ class qml_model():
                                             orbital_energies 
                                         ))
             #classical_inputs.append(classical_input)
-            classical_inputs.append(classical_input.flatten())
-        self.classical_input_shape = classical_inputs[0].shape  
+            train_classical_inputs.append(classical_input.flatten())
+        self.classical_input_shape = train_classical_inputs[0].shape  
 
         # Parsing quantum input.
-        gs_circuits = []
-        for i in range(len(dataset)):
-            gs_circuit = dataset[i]['gs_circuit']
-            gs_circuits.append(gs_circuit)
+        train_gs_tensors = []
+        for i in range(len(train_data)):
+            # Only include molecules with groundstate degeneracy 1.
+            if train_data[i]['multiplicity'] == 3:
+                continue
+            gs_tensor = train_data[i]['gs_tensor']
+            train_gs_tensors = tf.concat([train_gs_tensors, gs_tensor], axis=0)
+    
+        ## Testing data
+        print("Processing validation data.")
+        # Parsing classical input.
+        test_classical_inputs = []
+        for i in range(len(test_data)):
+            # Only include molecules with groundstate degeneracy 1.
+            if test_data[i]['multiplicity'] == 3:
+                continue
+            geometry = np.transpose(np.array([test_data[i]['geometry'][j][1] for j in range(4)]))
+            canonical_orbitals = np.array(test_data[i]['canonical_orbitals'])
+            orbital_energies = np.array(test_data[i]['orbital_energies'])
+            canonical_to_oao = np.array(test_data[i]['canonical_to_oao'])    
+            classical_input = np.vstack((
+                                            geometry, 
+                                            #canonical_orbitals, 
+                                            #canonical_to_oao,
+                                            orbital_energies 
+                                        ))
+            #classical_inputs.append(classical_input)
+            test_classical_inputs.append(classical_input.flatten())
 
-        """
-        ## HF approximation of groundstate.    
-        hf_circuit = cirq.Circuit()
-        hf_state = [1, 1, 1, 1, 0, 0, 0, 0]
-        # if parallel, tfq seems to copy qubits, hence no need to prepare groundstates on different qubits.
-        if self.intermediate_readouts:
-            upload_layer = [cirq.X(self.qubits[i]) ** hf_state[i] for i in range(self.n_ham_qubits)]         
-        # else, initialize load all n_reuploads groundstates on the respective qubits.           
-        else:
-            for reupload in range(self.n_reuploads):
-                upload_layer = [cirq.X(self.qubits[(reupload * self.n_ham_qubits) + i]) ** hf_state[i] 
-                                        for i in range(self.n_ham_qubits)]
-                hf_circuit.append(upload_layer)
-        groundstate_circuits = [hf_circuit for j in range(len(dataset))]
-        """
+        # Parsing quantum input.
+        test_gs_tensors = []
+        for i in range(len(test_data)):
+            # Only include molecules with groundstate degeneracy 1.
+            if test_data[i]['multiplicity'] == 3:
+                continue
+            gs_tensor = test_data[i]['gs_tensor']
+            test_gs_tensors = tf.concat([test_gs_tensors, gs_tensor], axis=0)
 
         # Parsing labels.
-        labels = [dataset[j]['exact_energy'] for j in range(len(dataset))]
+        train_labels = [train_data[j]['exact_energy'] 
+                            for j in range(len(train_data)) if train_data[j]['multiplicity'] == 1]
+        test_labels = [test_data[j]['exact_energy'] 
+                            for j in range(len(test_data)) if test_data[j]['multiplicity'] == 1]
 
-        ## Dividing into training and test.
-        # Shuffeling
-        d = list(zip(gs_circuits, classical_inputs, labels))
-        random.shuffle(d)
-        a, b , c = zip(*d)
-        gs_circuits = list(a)
-        classical_inputs = list(b)
-        labels = list(c)   
-        # Spliting
-        split_ind = int(len(labels) * 0.7)
-        train_gs_circuits = gs_circuits[:split_ind]
-        test_gs_circuits = gs_circuits[split_ind:]
-        train_classical_inputs = classical_inputs[:split_ind]
-        test_classical_inputs = classical_inputs[split_ind:]
-        train_labels = labels[:split_ind]
-        test_labels = labels[split_ind:]
-
-        return tfq.convert_to_tensor(train_gs_circuits), np.array(train_classical_inputs), \
-                tfq.convert_to_tensor(test_gs_circuits), np.array(test_classical_inputs), \
+        return train_gs_tensors, np.array(train_classical_inputs), \
+                test_gs_tensors, np.array(test_classical_inputs), \
                 np.array(train_labels), np.array(test_labels)
 
     """
@@ -311,11 +338,12 @@ class qml_model():
         # Compile & Fit.
         self.tfq_model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=0.02),
                                 loss=tf.losses.mse)
+
         history = self.tfq_model.fit(x=[self.train_groundstates, self.train_classical_inputs],
                                         y=self.train_labels,
                                         batch_size=16,
                                         epochs=25,
-                                        verbose=1,
+                                        verbose=2,
                                         validation_data=([self.test_groundstates, self.test_classical_inputs], 
                                                             self.test_labels))
         # Plotting results.
@@ -333,13 +361,19 @@ class qml_model():
             plt.savefig(path)
             plt.close()
 
+"""
+Generate a pickle H4-dataset.
+{faster as only call convert_to_tensor once}.
+"""
 def generate_dataset_pickle(pickle_name):
     dataset = []
     print("Generating pickle file of the dataset.")
     for filename in os.listdir(JSON_DIR):
         if filename.endswith('.json'):
             datapoint = load_data(filename)
-            datapoint.update({'gs_circuit' : tensorable_ucc_circuit(filename)})
+            gs_circuit = tensorable_ucc_circuit(filename)
+            gs_tensor = tfq.convert_to_tensor([gs_circuit])
+            datapoint.update({'gs_tensor' : gs_tensor})
             dataset.append(datapoint) 
             print("Loaded molecule", len(dataset))
     pickle_path = "./data/" + pickle_name + '.p' 
@@ -349,7 +383,7 @@ def generate_dataset_pickle(pickle_name):
  
 ## Setting up the model.
 #generate_dataset_pickle('H4_dataset')   
-model = qml_model(n_var_qubits=4, var_depth=3, n_reuploads=3, intermediate_readouts=True, 
+model = qml_model(n_var_qubits=2, var_depth=2, n_reuploads=2, intermediate_readouts=True, 
                     print_summary=True, plot_to_file=True)
 model.train(plot_results=True)
 #model = qml_model(n_var_qubits=2, var_depth=2, n_reuploads=2, intermediate_readouts=False, 
