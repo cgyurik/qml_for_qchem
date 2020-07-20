@@ -222,7 +222,8 @@ class qml_model():
         postprocess_nn = self.postprocess_nn(postprocess_input)
         
         ## Build full keras model from the layers
-        model = tf.keras.Model(inputs=[quantum_input, classical_input], outputs=postprocess_nn)    
+        model = tf.keras.Model(inputs=[quantum_input, classical_input], outputs=postprocess_nn,
+                                name="QML_model")    
     
         ## Print summary of the model.
         if print_summary:
@@ -247,9 +248,10 @@ class qml_model():
     """
     def load_dataset(self, data):
         # Loading generated dataset.
+        print("  - unpickling dataset.")
         with open(data, 'rb') as f:
             dataset = pickle.load(open(data, 'rb'))
-        datasize = 5
+        datasize = 10
         dataset = dataset[:datasize]
 
         ## Dividing into training and test.
@@ -261,71 +263,111 @@ class qml_model():
         test_data = dataset[split_ind:]
         
         ## Training data
-        print("Processing training data.")
+        print("  - processing training data.")
         # Parsing classical input.
         train_classical_inputs = []
+        print('    * loading classical training data.')
         for i in range(len(train_data)):
             # Only include molecules with groundstate degeneracy 1.
             if train_data[i]['multiplicity'] == 3:
                 continue
-            geometry = np.transpose(np.array([train_data[i]['geometry'][j][1] for j in range(4)]))
+
+            # Reading data from dict.
+            geometry = np.transpose(np.array([train_data[i]['geometry'][j][1] for j in range(1, 4)]))
             canonical_orbitals = np.array(train_data[i]['canonical_orbitals'])
             orbital_energies = np.array(train_data[i]['orbital_energies'])
-            canonical_to_oao = np.array(train_data[i]['canonical_to_oao'])    
-            classical_input = np.vstack((
-                                            geometry, 
-                                            #canonical_orbitals, 
-                                            #canonical_to_oao,
-                                            orbital_energies 
-                                        ))
-            #classical_inputs.append(classical_input)
-            train_classical_inputs.append(classical_input.flatten())
+            canonical_to_oao = np.array(train_data[i]['canonical_to_oao'])  
+            
+            # Puting geometry & orbital energies in classical input
+            classical_input = np.concatenate((geometry, orbital_energies), axis=None)
+            train_classical_inputs.append(classical_input)
         self.classical_input_shape = train_classical_inputs[0].shape  
 
         # Parsing quantum input.
-        train_gs_tensors = []
+        #train_gs_tensors = []
+        train_gs_circuits = []            
         for i in range(len(train_data)):
-            # Only include molecules with groundstate degeneracy 1.
+            print('    * loading training circuit', i, '/', len(train_data))            
+
+	        # Only include molecules with groundstate degeneracy 1.
             if train_data[i]['multiplicity'] == 3:
                 continue
-            gs_tensor = train_data[i]['gs_tensor']
-            train_gs_tensors = tf.concat([train_gs_tensors, gs_tensor], axis=0)
-    
+
+            # Direct tensor approach {problem: maybe incorrect qubits?}
+            #gs_tensor = train_data[i]['gs_tensor']
+            #train_gs_tensors = tf.concat([train_gs_tensors, gs_tensor], axis=0)
+            
+            # Reconstructing circuit approach.
+            train_gs_circuit = cirq.Circuit()
+            for op in train_data[i]['gs_circuit'].all_operations():
+                if len(op.qubits) == 1:
+                    qubit_id = op.qubits[0].col
+                    train_gs_circuit += op.with_qubits(self.qubits[qubit_id])
+                elif len(op.qubits) == 2:
+                    qubit_id0 = op.qubits[0].col
+                    qubit_id1 = op.qubits[1].col
+                    train_gs_circuit += op.with_qubits(self.qubits[qubit_id0], self.qubits[qubit_id1])
+                else:
+                    print("Encountered >=3-qubit gate, error!")
+                    exit()
+            train_gs_circuits.append(train_gs_circuit)
+
         ## Testing data
-        print("Processing validation data.")
+        print("  - processing validation data.")
         # Parsing classical input.
         test_classical_inputs = []
+        print('    * loading classical validation data.')
         for i in range(len(test_data)):
             # Only include molecules with groundstate degeneracy 1.
             if test_data[i]['multiplicity'] == 3:
                 continue
-            geometry = np.transpose(np.array([test_data[i]['geometry'][j][1] for j in range(4)]))
+            # Reading data from dict.            
+            geometry = np.transpose(np.array([test_data[i]['geometry'][j][1] for j in range(1, 4)]))
             canonical_orbitals = np.array(test_data[i]['canonical_orbitals'])
             orbital_energies = np.array(test_data[i]['orbital_energies'])
             canonical_to_oao = np.array(test_data[i]['canonical_to_oao'])    
-            classical_input = np.vstack((
-                                            geometry, 
-                                            #canonical_orbitals, 
-                                            #canonical_to_oao,
-                                            orbital_energies 
-                                        ))
-            #classical_inputs.append(classical_input)
-            test_classical_inputs.append(classical_input.flatten())
-
+            
+            # Puting geometry & orbital energies in classical input
+            classical_input = np.concatenate((geometry, orbital_energies), axis=None)
+            test_classical_inputs.append(classical_input)
+            
         # Parsing quantum input.
-        test_gs_tensors = []
+        #test_gs_tensors = []
+        test_gs_circuits = []
         for i in range(len(test_data)):
+            print('    * loading validation circuit', i, '/', len(test_data))
+
             # Only include molecules with groundstate degeneracy 1.
             if test_data[i]['multiplicity'] == 3:
                 continue
-            gs_tensor = test_data[i]['gs_tensor']
-            test_gs_tensors = tf.concat([test_gs_tensors, gs_tensor], axis=0)
+            
+            # Direct tensor approach {problem: maybe incorrect qubits?}
+            #gs_tensor = test_data[i]['gs_tensor']
+            #test_gs_tensors = tf.concat([test_gs_tensors, gs_tensor], axis=0)
+            
+            # Reconstructing circuit approach.
+            test_gs_circuit = cirq.Circuit()
+            for op in test_data[i]['gs_circuit'].all_operations():
+                if len(op.qubits) == 1:
+                    qubit_id = op.qubits[0].col
+                    test_gs_circuit += op.with_qubits(self.qubits[qubit_id])
+                elif len(op.qubits) == 2:
+                    qubit_id0 = op.qubits[0].col
+                    qubit_id1 = op.qubits[1].col
+                    test_gs_circuit += op.with_qubits(self.qubits[qubit_id0], self.qubits[qubit_id1])
+                else:
+                    print("Encountered >=3-qubit gate, error!")
+                    exit()
+            test_gs_circuits.append(test_gs_circuit)
 
         # Parsing labels.
         train_labels = [train_data[j]['exact_energy'] 
                             for j in range(len(train_data)) if train_data[j]['multiplicity'] == 1]
         test_labels = [test_data[j]['exact_energy'] 
                             for j in range(len(test_data)) if test_data[j]['multiplicity'] == 1]
+
+        train_gs_tensors = tfq.convert_to_tensor(train_gs_circuits)
+        test_gs_tensors = tfq.convert_to_tensor(test_gs_circuits)
 
         return train_gs_tensors, np.array(train_classical_inputs), \
                 test_gs_tensors, np.array(test_classical_inputs), \
@@ -334,19 +376,24 @@ class qml_model():
     """
     Train the qml model.
     """ 
-    def train(self, plot_results=False):    
+    def train(self, model_path, plot_results=False):    
         # Compile & Fit.
+        print("Compiling model.")
         self.tfq_model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=0.02),
                                 loss=tf.losses.mse)
 
+        print("Fitting model.")
         history = self.tfq_model.fit(x=[self.train_groundstates, self.train_classical_inputs],
                                         y=self.train_labels,
                                         batch_size=16,
                                         epochs=25,
-                                        verbose=2,
+                                        verbose=1,
                                         validation_data=([self.test_groundstates, self.test_classical_inputs], 
                                                             self.test_labels))
-        # Plotting results.
+        # Saving results.
+        self.tfq_model.save(model_path)
+	
+	# Plotting results.
         if plot_results:        
             plt.plot(history.history['val_loss'], label='qml_model')
             plt.title('QML model performance')
@@ -372,6 +419,7 @@ def generate_dataset_pickle(pickle_name):
         if filename.endswith('.json'):
             datapoint = load_data(filename)
             gs_circuit = tensorable_ucc_circuit(filename)
+            datapoint.update({'gs_circuit' : gs_circuit})
             gs_tensor = tfq.convert_to_tensor([gs_circuit])
             datapoint.update({'gs_tensor' : gs_tensor})
             dataset.append(datapoint) 
@@ -384,8 +432,8 @@ def generate_dataset_pickle(pickle_name):
 ## Setting up the model.
 #generate_dataset_pickle('H4_dataset')   
 model = qml_model(n_var_qubits=2, var_depth=2, n_reuploads=2, intermediate_readouts=True, 
-                    print_summary=True, plot_to_file=True)
-model.train(plot_results=True)
+                    print_summary=True, plot_to_file=False)
+model.train('./results/model1.p', plot_results=True)
 #model = qml_model(n_var_qubits=2, var_depth=2, n_reuploads=2, intermediate_readouts=False, 
 #                    print_summary=True, plot_to_file=True)
 #model.train(plot_results=True)
