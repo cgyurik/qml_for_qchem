@@ -1,16 +1,14 @@
 """Utility functions related to tensorflow_quantum."""
-
 import numpy as np
 from openfermion import transforms, ops
 import cirq
 import tensorflow_quantum as tfq  # type: ignore
-
-from ..utils import load_ucc_data, load_data
-from ..ansatz_functions import (generate_ucc_amplitudes,
+from utils import load_ucc_data, load_data
+from qml_model.ansatz_functions import (generate_ucc_amplitudes,
                                 generate_ucc_operators)
-from ..ansatz_functions.qubitoperator_to_paulistring_translator \
+from qml_model.ansatz_functions.qubitoperator_to_paulistring_translator \
     import qubitoperator_to_pauli_string
-from ..scripts.optimize_ucc import (singlet_hf_generator,
+from qml_model.scripts.optimize_ucc import (singlet_hf_generator,
                                     triplet_hf_generator)
 
 

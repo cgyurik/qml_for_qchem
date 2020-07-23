@@ -21,14 +21,14 @@ ROOT_DIR = os.path.dirname(os.path.dirname(os.path.dirname(
     os.path.abspath(__file__))))
 sys.path.append(ROOT_DIR)
 
-from src.ansatz_functions.ucc_functions import (
+from qml_model.ansatz_functions.ucc_functions import (
     generate_ucc_amplitudes,
     generate_circuit_from_pauli_string,
     generate_ucc_operators)
-from src.vqe_functions.vqe_optimize_functions import (
+from qml_model.vqe_functions.vqe_optimize_functions import (
     circuit_state_fidelity,
     circuit_state_expval)
-from src.utils import (
+from qml_model.utils import (
     load_data,
     load_ucc_data,
     MOLECULES_DIR,
