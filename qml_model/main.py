@@ -32,7 +32,9 @@ for i in range(5):
     checkpoint_dir = os.path.dirname(checkpoint_path)
 
     # Create a callback that saves the model's weights
-    cp_callback = tf.keras.callbacks.ModelCheckpoint(filepath=checkpoint_path, verbose=1)
+    cp_callback = tf.keras.callbacks.ModelCheckpoint(filepath=checkpoint_path, 
+                                                        save_weights_only=True, 
+                                                        verbose=1)
 
     print("Fitting model.")
     history = model.tfq_model.fit(x=[model.train_groundstates, model.train_classical_inputs],
