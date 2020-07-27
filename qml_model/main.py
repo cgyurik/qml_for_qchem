@@ -10,44 +10,60 @@ import numpy as np
 # visualization tools
 import matplotlib.pyplot as plt
 
-# Setting up the model.
-print("-----Setting up model-----")
-model = tfq_model(n_var_qubits=2, var_depth=2, n_reuploads=2, intermediate_readouts=True, 
-                    processed_data='H4_dataset_processed_10_parallel', print_summary=True, plot_to_file=False)
-print("Compiling model.")
-model.tfq_model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=0.02), loss=tf.losses.mse)
+# Hyperparameters
+reups = [1, 2, 3, 4, 5]
+qubits = [3, 2, 2, 1, 1]
+depths = [5, 2, 1, 1, 1]
 
-# Setting up callback to save during training.
-checkpoint_path = "models/test/cp-{epoch:04d}.ckpt"
-checkpoint_dir = os.path.dirname(checkpoint_path)
+# Looping over all experiments
+for i in range(5):
 
-# Create a callback that saves the model's weights
-cp_callback = tf.keras.callbacks.ModelCheckpoint(filepath=checkpoint_path,
-                                                 verbose=1)
+    # Setting up the model.
+    print("-----Setting up model-----")
+    model = tfq_model(n_var_qubits=qubits[i], var_depth=depths[i], n_reuploads=reups[i], 
+                        intermediate_readouts=True, processed_data='H4_dataset_processed_10_parallel',
+                        print_summary=True, plot_to_file=False)
+    
+    print("Compiling model.")
+    model.tfq_model.compile(optimizer=tf.keras.optimizers.Adam(), loss=tf.losses.mse)
 
-print("Fitting model.")
-history = model.tfq_model.fit(x=[model.train_groundstates, model.train_classical_inputs],
+    # Setting up callback to save during training.
+    checkpoint_path = "./models/experiment_" + str(i) + "/cp-{epoch:02d}.ckpt"
+    checkpoint_dir = os.path.dirname(checkpoint_path)
+
+    # Create a callback that saves the model's weights
+    cp_callback = tf.keras.callbacks.ModelCheckpoint(filepath=checkpoint_path, verbose=1)
+
+    print("Fitting model.")
+    history = model.tfq_model.fit(x=[model.train_groundstates, model.train_classical_inputs],
                                     y=model.train_labels,
-                                    batch_size=10,
-                                    epochs=3,
+                                    batch_size=32, #default
+                                    epochs=1, #seems enough from prior experiments
                                     verbose=1,
                                     validation_data=([model.test_groundstates, model.test_classical_inputs], 
                                                         model.test_labels))
-print("Saving trained model.")
-model_path = './models/test/test_model'
-model.tfq_model.save(model_path)
 
-# Plotting results.
-print("Plotting validation accuracy")
-plt.plot(history.history['val_loss'], label='qml_model')
-plt.title('QML model performance')
-plt.xlabel('Epochs')
-plt.ylabel('Validation Accuracy')
-path = './img/val_acc-'
-path += 'v-qubits:' + str(model.n_var_qubits)
-path += '_v-depth:' + str(model.var_depth) 
-path += '_reuploads:' + str(model.n_reuploads)
-path += '_intermediate_readouts:' + str(model.intermediate_readouts)
-path += '.png'
-plt.savefig(path)
-plt.close()
+    # Saving results.
+    print("Saving results trained model.")
+    losses = [history.history['loss'], history.history['val_loss']]
+    pickle_path = "./models/experiment_" + str(i) + "/losses.p"
+    with open(pickle_path, 'wb') as f:      
+            pickle.dump(losses, f)   
+    model_path = "./models/experiment_" + str(i) + "/final_weights"
+    model.tfq_model.save_weights(model_path)
+
+    # Plotting results.
+    print("Plotting validation accuracy")
+    plt.plot(history.history['val_loss'], label='qml_model')
+    plt.title('QML model performance')
+    plt.xlabel('Epochs')
+    plt.ylabel('Validation Accuracy')
+    path = './img/val_acc-'
+    path += 'v-qubits:' + str(model.n_var_qubits)
+    path += '_v-depth:' + str(model.var_depth) 
+    path += '_reuploads:' + str(model.n_reuploads)
+    path += '_intermediate_readouts:' + str(model.intermediate_readouts)
+    path += '.png'
+    plt.savefig(path)
+    plt.close()
+

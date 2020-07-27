@@ -209,7 +209,11 @@ class tfq_model():
                     tfq.layers.ControlledPQC(self.pqc[i], operators=self.readouts, 
                                                 name=pqc_id)([quantum_input, preprocess_nn[i]])
                 )
-            pqc_expectation = tf.keras.layers.concatenate(pqc_layers, name='readout_concatenate')
+            # If multiple reuploads, concatenate outcomes.
+            if self.n_reuploads > 1:
+                pqc_expectation = tf.keras.layers.concatenate(pqc_layers, name='readout_concatenate')
+            else:
+                pqc_expectation = pqc_layers[0]
         else:
             # setting up single controller nn for the serial pqc.
             preprocess_nn = self.controller_nn(classical_input)
