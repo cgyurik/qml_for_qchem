@@ -259,6 +259,7 @@ class tfq_model():
             with open(path, 'rb') as f:
                 dataset = pickle.load(f)
                 self.classical_input_shape = dataset[1][0].shape
+                print(self.classical_input_shape)
                 return dataset[0], dataset[1], \
                     dataset[2], dataset[3], \
                     dataset[4], dataset[5]
@@ -299,8 +300,8 @@ class tfq_model():
             canonical_to_oao = np.array(train_data[i]['canonical_to_oao'])  
             
             # Puting geometry & orbital energies in classical input
-            classical_input = np.concatenate((geometry, orbital_energies), axis=None)
-            train_classical_inputs.append(classical_input)
+            # classical_input = np.concatenate((geometry, orbital_energies), axis=None)
+            train_classical_inputs.append(geometry.flatten()) # 2nd experiment: train only on geometry
         self.classical_input_shape = train_classical_inputs[0].shape  
 
         # Parsing quantum input.
@@ -357,8 +358,8 @@ class tfq_model():
             canonical_to_oao = np.array(test_data[i]['canonical_to_oao'])    
             
             # Puting geometry & orbital energies in classical input
-            classical_input = np.concatenate((geometry, orbital_energies), axis=None)
-            test_classical_inputs.append(classical_input)
+            # classical_input = np.concatenate((geometry, orbital_energies), axis=None)
+            test_classical_inputs.append(geometry.flatten()) # 2nd experiment: train only on geometry
             
         # Parsing quantum input.
         test_gs_circuits = []
@@ -416,7 +417,7 @@ class tfq_model():
         print("Creating pickle of processed data for quicker loading.")
         data_id = 'H4_dataset_processed_' + str(len(dataset))
         if self.intermediate_readouts:
-            data_id += '_parallel'
+            data_id += '_parallel_only-geometry'
         else:
             data_id += '_serial_' + str(self.n_reuploads)
         pickle_path = "./data/" + data_id + '.p' 

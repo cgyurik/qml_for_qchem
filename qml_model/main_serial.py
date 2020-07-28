@@ -11,36 +11,40 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 # Hyperparameters
-reups = [1, 2, 3, 4, 5]
-qubits = [3, 2, 2, 1, 1]
-depths = [5, 2, 1, 1, 1]
+reups = [1, 2, 3]
+qubits = [2, 2, 1]
+depths = [3, 1, 1]
+data = ['H4_dataset_processed_501_serial_1',
+        'H4_dataset_processed_501_serial_2', 
+        None]
 
 # Looping over all experiments
-for i in range(5):
+for i in range(3):
 
     # Setting up the model.
     print("-----Setting up model-----")
-    model = tfq_model(n_var_qubits=qubits[i], var_depth=depths[i], n_reuploads=reups[i], 
-                        intermediate_readouts=True, processed_data='H4_dataset_processed_10_parallel',
+    model = tfq_model(n_var_qubits=qubits[i], var_depth=depths[i], n_reuploads=reups[i] 
+                        intermediate_readouts=False, 
+                        processed_data=data[i],
                         print_summary=True, plot_to_file=False)
     
     print("Compiling model.")
     model.tfq_model.compile(optimizer=tf.keras.optimizers.Adam(), loss=tf.losses.mse)
 
     # Setting up callback to save during training.
-    checkpoint_path = "./models/experiment_" + str(i) + "/cp-{epoch:02d}.ckpt"
+    checkpoint_path = "./models/serial_experiment_" + str(i) + "/cp-{epoch:02d}.ckpt"
     checkpoint_dir = os.path.dirname(checkpoint_path)
 
     # Create a callback that saves the model's weights
     cp_callback = tf.keras.callbacks.ModelCheckpoint(filepath=checkpoint_path, 
                                                         save_weights_only=True, 
-                                                        verbose=1)
+                                                       verbose=1)
 
     print("Fitting model.")
     history = model.tfq_model.fit(x=[model.train_groundstates, model.train_classical_inputs],
                                     y=model.train_labels,
                                     batch_size=32, #default
-                                    epochs=1, #seems enough from prior experiments
+                                    epochs=15, #seems enough from prior experiments
                                     verbose=1,
                                     validation_data=([model.test_groundstates, model.test_classical_inputs], 
                                                         model.test_labels))
@@ -48,10 +52,10 @@ for i in range(5):
     # Saving results.
     print("Saving results trained model.")
     losses = [history.history['loss'], history.history['val_loss']]
-    pickle_path = "./models/experiment_" + str(i) + "/losses.p"
+    pickle_path = "./models/serial_experiment_" + str(i) + "/losses.p"
     with open(pickle_path, 'wb') as f:      
             pickle.dump(losses, f)   
-    model_path = "./models/experiment_" + str(i) + "/final_weights"
+    model_path = "./models/serial_experiment_" + str(i) + "/final_weights"
     model.tfq_model.save_weights(model_path)
 
     # Plotting results.
