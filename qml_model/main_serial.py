@@ -44,7 +44,7 @@ for i in range(3):
     history = model.tfq_model.fit(x=[model.train_groundstates, model.train_classical_inputs],
                                     y=model.train_labels,
                                     batch_size=32, #default
-                                    epochs=15, #seems enough from prior experiments
+                                    epochs=10, #seems enough from prior experiments
                                     verbose=1,
                                     validation_data=([model.test_groundstates, model.test_classical_inputs], 
                                                         model.test_labels))
