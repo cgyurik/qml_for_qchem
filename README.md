@@ -19,8 +19,8 @@ Additionally, at the root level of this repository, we find:
 ## Generic definition of the problem:
 
 ### Goal: 
-For a family of chemical Hamiltonians (i.e., molecules), use a QML model to **learn a resticted quantum estimator of some property of the molecules**. 
-This QML model takes as an input *K* copies of a quantum state *ρ* (encoding some properties of the molecule) and some classical information on the molecule, and outputs the best estimate of property to predict.
+For a family of chemical Hamiltonians (i.e., molecules), use a QML model to **predict some property of the molecules**. 
+The QML model takes as an input *K* copies of a quantum state *ρ* (encoding some properties of the molecule) and some classical information on the molecule, and outputs the best estimate of property to predict.
 
 ![structure -> property diagram](figures/diagram.png)
 
@@ -50,7 +50,7 @@ The PQC can reupload different copies of the groundstate both serial or in paral
 
 ## Simple first test case:
 
-As a first test case, we try to learn an estimator of the ground state energy *E_GS*, given *K* copies of the ground state |*GS*> and some information on the molecule, for the moelcule family H4.
+As a first test case, we try to predict the ground state energy *E_GS*, given *K* copies of the ground state |*GS*> and some information on the molecule, for the moelcule family H4.
 
 ### Instance system
 A molecule in the H4 family, with the following restrictions on the geometry:
