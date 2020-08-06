@@ -6,7 +6,7 @@ import numpy as np
 
 # manage relative paths
 BASE_DIR = os.path.abspath(os.path.dirname(os.path.dirname(__file__))) + '/'
-
+BASE_DIR = BASE_DIR.replace('/utils', '')
 DATA_DIR = BASE_DIR + 'data/'
 MOLECULES_DIR = DATA_DIR + 'molecules/'
 JSON_DIR = DATA_DIR + 'json/'

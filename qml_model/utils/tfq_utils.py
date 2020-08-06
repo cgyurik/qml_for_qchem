@@ -4,13 +4,12 @@ from openfermion import transforms, ops
 import cirq
 import tensorflow_quantum as tfq  # type: ignore
 from utils import load_ucc_data, load_data
-from qml_model.ansatz_functions import (generate_ucc_amplitudes,
+from utils.ansatz_functions import (generate_ucc_amplitudes,
                                 generate_ucc_operators)
-from qml_model.ansatz_functions.qubitoperator_to_paulistring_translator \
+from utils.ansatz_functions.qubitoperator_to_paulistring_translator \
     import qubitoperator_to_pauli_string
-from qml_model.scripts.optimize_ucc import (singlet_hf_generator,
+from scripts.optimize_ucc import (singlet_hf_generator,
                                     triplet_hf_generator)
-
 
 def tensorable_ucc_circuit(filename: str) -> cirq.Circuit:
     '''construct a UCC circuit compatible with TFQ, from data files'''

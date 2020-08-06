@@ -1,10 +1,12 @@
-# disable terminal warning tf
+## os/sys tools
 import os, sys
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3' 
-sys.path.append(os.path.abspath('..'))
+from functools import partial
+# disable terminal warning tf
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 # general tools
 import tensorflow as tf
 import tensorflow_quantum as tfq
+import tensorflow_model_optimization as tfmot
 import numpy as np
 import cirq, sympy
 import utils.pqc as pqc
@@ -13,7 +15,7 @@ import scipy, random, pickle
 import matplotlib.pyplot as plt
 from cirq.contrib.svg import SVGCircuit
 # data loading
-from utils import load_data, JSON_DIR
+from utils.data_utils.load_lib import load_data, JSON_DIR
 from utils.tfq_utils import tensorable_ucc_circuit
 
 
@@ -44,7 +46,8 @@ class tfq_model():
     - intermediate_readouts: allow readouts after each reupload (i.e., parallel or serial pqcs).
     """
     def __init__(self, n_var_qubits=2, var_depth=2, n_reuploads=2, intermediate_readouts=False,
-                  processed_data=None, print_circuit=False, print_summary=False, plot_to_file=False):
+                dir_path=None, print_circuit=False, print_summary=False, plot_to_file=False,
+                processed_data=None):
         ## Setting hyperparameters.
         self.n_var_qubits = n_var_qubits
         self.var_depth = var_depth
@@ -60,14 +63,17 @@ class tfq_model():
         else:
             total_n_qubits = ( self.n_reuploads * self.n_ham_qubits ) + self.n_var_qubits
         self.qubits = cirq.GridQubit.rect(1, total_n_qubits)
-        self.readouts = [cirq.Z(bit) for bit in self.qubits[-self.n_var_qubits:]]       
+        self.readouts = [cirq.Z(bit) for bit in self.qubits[-(self.n_ham_qubits + self.n_var_qubits):]]       
         
         ## Reading H4 data
         print("Loading data.")
         self.train_groundstates, self.train_classical_inputs, \
         self.test_groundstates, self.test_classical_inputs, \
         self.train_labels, self.test_labels = self.load_dataset(processed_data=processed_data)
-        
+
+        ## Setting dir_path for reporting output
+        self.dir_path = dir_path
+
         ## Initializing components of the model.    
         print("Setting up components of the model.")
         print("  - pqc.")        
@@ -117,10 +123,21 @@ class tfq_model():
         ## Printing the circuit(s).
         if print_circuit:   
             if self.intermediate_readouts:
-                print(self.n_reuploads, "parallel copies of the circuit:")
-                print(model_circuits[0].to_text_diagram(transpose=True))
+                # Checking if dir_path is specified, otherwise print to terminal.
+                if self.dir_path is None:
+                    print(self.n_reuploads, "parallel copies of the circuit:")
+                    print(model_circuits[0].to_text_diagram(transpose=True))
+                else:
+                    with open(self.dir_path + '/txt/circuit.txt', 'w') as f:
+                        print(self.n_reuploads, "parallel copies of the circuit:", file=f)
+                        print(model_circuits[0].to_text_diagram(transpose=True), file=f)
             else:
-                print(model_circuit.to_text_diagram(transpose=True))
+                # Checking if path is specified, otherwise print to terminal.
+                if self.dir_path is None:
+                    print(model_circuits.to_text_diagram(transpose=True))
+                else:
+                    with open(self.dir_path + '/txt/circuit.txt', 'w') as f:
+                        print(model_circuits.to_text_diagram(transpose=True), file=f)
 
         return model_circuit
 
@@ -148,20 +165,18 @@ class tfq_model():
             n_total_params = n_var_params + n_pool_params 
             controller = []
             for i in range(self.n_reuploads):
-                ith_controller = tf.keras.Sequential([
-                                    tf.keras.layers.Dense(3, 
-                                                        input_shape=self.classical_input_shape, 
-                                                        activation='elu'),
-                                    tf.keras.layers.Dense(n_total_params)],
-                                    name='controller_nn_' + str(i)
-                                    )
+                ith_controller = tf.keras.Sequential(
+                                    [#tfmot.sparsity.keras.prune_low_magnitude(
+                                        tf.keras.layers.Dense(n_total_params, input_shape=(4,))
+                                    #)
+                                    ],
+                                name='controller_nn_' + str(i))
                 controller.append(ith_controller)
         # Else, construct single controller for the serial pqc.
         else:        
             n_total_params = ( n_var_params + n_pool_params ) * self.n_reuploads 
             controller = tf.keras.Sequential([
                 tf.keras.layers.Dense(3, input_shape=self.classical_input_shape, activation='elu'),
-                #tf.keras.layers.Reshape((10, )),
                 tf.keras.layers.Dense(n_total_params)],
                 name='controller_nn')
     
@@ -174,33 +189,49 @@ class tfq_model():
         # Setting input_shape of expectations & classical_input of postprocess_nn.
         if self.intermediate_readouts:                
             q_shape = (len(self.readouts) * self.n_reuploads, )
-            c_shape = self.classical_input_shape
+            c_shape = (4,)
             input_shape = tuple(map(sum, zip(q_shape, c_shape))) # (x, ) , (y, ) -> (x + y, )
         else:
             q_shape = (len(self.readouts), )
-            c_shape = self.classical_input_shape 
+            c_shape = (4,)
             input_shape = tuple(map(sum, zip(q_shape, c_shape))) # (x, ) , (y, ) -> (x + y, )
 
         # Setting-up postprocess_nn
-        postprocess_nn = tf.keras.Sequential([
-            tf.keras.layers.Dense(3, input_shape=input_shape, activation='elu'),
-            tf.keras.layers.Dense(1)],
-            name='postprocess_nn')
+        postprocess_nn = tf.keras.Sequential([tf.keras.layers.Dense(1, input_shape=input_shape)],
+                                                name='postprocess_nn')
         return postprocess_nn
 
     """
     Create the hybrid model.
     """
     def create_tfq_model(self, print_summary=False, plot_to_file=False):
-        ## Setting up input layer.
+        ## Setting up input layer for the quantum input.
         quantum_input = tf.keras.Input(shape=(), dtype=tf.string, name='quantum_input')
-        classical_input = tf.keras.Input(shape=self.classical_input_shape, dtype=tf.dtypes.float32, 
-                                             name='classical_input')
+
+        ## Setting up input layer for each of the classical parameters.        
+        classical_input = []
+        for i in range(3):
+            classical_input.append(tf.keras.Input(shape=(3,), dtype=tf.dtypes.float32, 
+                                                    name='geometry_'+str(i)))
+        classical_input.append(tf.keras.Input(shape=(4,), dtype=tf.dtypes.float32, 
+                                                    name='orbital_energies'))
+
+        ## Setting up seperate NN for each of the classical parameters.        
+        preprocess = []
+        for i in range(3):
+            preprocess.append(
+                tf.keras.layers.Dense(1, input_shape=(3,),name='geometry_nn_' + str(i))(classical_input[i])
+                )
+        preprocess.append(
+                tf.keras.layers.Dense(1, input_shape=(4,), name='orbital_energies_nn')(classical_input[3])
+                )
+        classical_params = tf.keras.layers.concatenate(preprocess, 
+                                                                name='processed_classical_parameters')
 
         ## Setting up controller nn(s) & controlled pqc(s) and connecting them to input layer.
         if self.intermediate_readouts:
             # setting up 'controller nn' for each parallel pqc.
-            preprocess_nn = [self.controller_nn[i](classical_input) for i in range(self.n_reuploads)]
+            preprocess_nn = [self.controller_nn[i](classical_params) for i in range(self.n_reuploads)]
             pqc_layers = []
             # connecting each controller nn & quantum input to the corresponding pqc.
             for i in range(self.n_reuploads):
@@ -222,30 +253,28 @@ class tfq_model():
             pqc_expectation = pqc_layer([quantum_input, preprocess_nn])
 
         ## Connecting PQC to 'postprocess NN'
-        postprocess_input = tf.keras.layers.concatenate([pqc_expectation, classical_input],
-                                                            name='postprocess_input')
+        postprocess_input = tf.keras.layers.concatenate([pqc_expectation, classical_params],
+                                                           name='postprocess_input')
         postprocess_nn = self.postprocess_nn(postprocess_input)
-        
+            
         ## Build full keras model from the layers
         model = tf.keras.Model(inputs=[quantum_input, classical_input], outputs=postprocess_nn,
                                 name="QML_model")    
     
         ## Print summary of the model.
         if print_summary:
-            model.summary()
+            # Checking if dir_path is specified, otherwise print to terminal.
+            if self.dir_path is None: 
+                model.summary()
+            else:
+                with open(self.dir_path + '/txt/summary.txt', 'w') as f:      
+                    fn = partial(print, file=f)
+                    model.summary(print_fn=fn)
         ## Show the keras plot of the model
         if plot_to_file:
-            path = './img/model_'
-            path += 'v-qubits:' + str(self.n_var_qubits)
-            path += '_v-depth:' + str(self.var_depth) 
-            path += '_reuploads:' + str(self.n_reuploads)
-            path += '_intermediate_readouts:' + str(self.intermediate_readouts)
-            path += '.png'             
-            tf.keras.utils.plot_model(model,
-                                      to_file=path,
-                                      show_shapes=True,
-                                      show_layer_names=True,
-                                      dpi=70)
+            path = self.dir_path + '/img/model.png'
+            tf.keras.utils.plot_model(model, to_file=path, show_shapes=True, show_layer_names=True, dpi=70)
+        
         return model
 
     """
@@ -273,11 +302,11 @@ class tfq_model():
                 datapoint.update({'gs_circuit' : gs_circuit})
                 dataset.append(datapoint) 
                 print("    * read molecule", len(dataset), ".")
+                if len(dataset) >= 3:
+                    break
 
         ## Dividing into training and test.
-        # Shuffeling dataset
         random.shuffle(dataset)
-        # Spliting
         split_ind = int(len(dataset) * 0.7)
         train_data = dataset[:split_ind]
         test_data = dataset[split_ind:]
@@ -285,7 +314,10 @@ class tfq_model():
         ## Training data
         print("  - processing training data.")
         # Parsing classical input.
-        train_classical_inputs = []
+        train_geom1 = []
+        train_geom2 = []
+        train_geom3 = []
+        train_oe = []
         print('    * loading classical training data.')
         for i in range(len(train_data)):
             # Only include molecules with groundstate degeneracy 1.
@@ -299,14 +331,17 @@ class tfq_model():
             canonical_to_oao = np.array(train_data[i]['canonical_to_oao'])  
             
             # Puting geometry & orbital energies in classical input
-            # classical_input = np.concatenate((geometry, orbital_energies), axis=None)
-            train_classical_inputs.append(geometry.flatten()) # 2nd experiment: train only on geometry
-        self.classical_input_shape = train_classical_inputs[0].shape  
+            train_geom1.append(geometry[0])
+            train_geom2.append(geometry[1])
+            train_geom3.append(geometry[2])
+            train_oe.append(orbital_energies)
+        train_classical_inputs = [np.array(train_geom1), np.array(train_geom2), np.array(train_geom3),
+                                    np.array(train_oe)]
 
         # Parsing quantum input.
         train_gs_circuits = []            
         for i in range(len(train_data)):
-            print('    * loading training circuit', i, '/', len(train_data))            
+            print('    * loading training circuit', i+1, '/', len(train_data))            
 
 	        # Only include molecules with groundstate degeneracy 1.
             if train_data[i]['multiplicity'] == 3:
@@ -344,6 +379,10 @@ class tfq_model():
         print("  - processing validation data.")
         # Parsing classical input.
         test_classical_inputs = []
+        test_geom1 = []
+        test_geom2 = []
+        test_geom3 = []
+        test_oe = []
         print('    * loading classical validation data.')
         for i in range(len(test_data)):
             # Only include molecules with groundstate degeneracy 1.
@@ -357,13 +396,17 @@ class tfq_model():
             canonical_to_oao = np.array(test_data[i]['canonical_to_oao'])    
             
             # Puting geometry & orbital energies in classical input
-            # classical_input = np.concatenate((geometry, orbital_energies), axis=None)
-            test_classical_inputs.append(geometry.flatten()) # 2nd experiment: train only on geometry
-            
+            test_geom1.append(geometry[0])
+            test_geom2.append(geometry[1])
+            test_geom3.append(geometry[2])
+            test_oe.append(orbital_energies)        
+        test_classical_inputs = [np.array(test_geom1), np.array(test_geom2), np.array(test_geom3), 
+                                    np.array(test_oe)]
+           
         # Parsing quantum input.
         test_gs_circuits = []
         for i in range(len(test_data)):
-            print('    * loading validation circuit', i, '/', len(test_data))
+            print('    * loading validation circuit', i+1, '/', len(test_data))
 
             # Only include molecules with groundstate degeneracy 1.
             if test_data[i]['multiplicity'] == 3:
@@ -409,21 +452,21 @@ class tfq_model():
         test_gs_tensors = tfq.convert_to_tensor(test_gs_circuits)
 
         # Pickling for next time.
-        processed_dataset = [train_gs_tensors, np.array(train_classical_inputs), test_gs_tensors,
-                    np.array(test_classical_inputs), np.array(train_labels), np.array(test_labels)]
+        processed_dataset = [train_gs_tensors, train_classical_inputs, test_gs_tensors,
+                                test_classical_inputs, np.array(train_labels), np.array(test_labels)]
         
         # Pickling the dict.
         print("Creating pickle of processed data for quicker loading.")
-        data_id = 'H4_dataset_processed_' + str(len(dataset))
+        data_id = 'H4_processed_'
         if self.intermediate_readouts:
-            data_id += '_parallel_only-geometry'
+            data_id += 'parallel_' + str(len(dataset))
         else:
-            data_id += '_serial_' + str(self.n_reuploads)
+            data_id += 'serial_' + str(self.n_reuploads) + '_' + str(len(dataset))
         pickle_path = "./data/" + data_id + '.p' 
         with open(pickle_path, 'wb') as f:      
             pickle.dump(processed_dataset, f)    
-      
-        return train_gs_tensors, np.array(train_classical_inputs), \
-                test_gs_tensors, np.array(test_classical_inputs), \
+
+        return train_gs_tensors, train_classical_inputs, \
+                test_gs_tensors, test_classical_inputs, \
                 np.array(train_labels), np.array(test_labels)
 

@@ -3,7 +3,7 @@
 from .generic import (
     encode_complex_and_array
 )
-from .load_lib import (
+from .data_utils.load_lib import (
     MOLECULES_DIR, UCC_DIR, JSON_DIR, DATA_DIR,
     load_data,
     load_ucc_data

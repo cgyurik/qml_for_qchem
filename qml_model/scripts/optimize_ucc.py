@@ -13,22 +13,23 @@ import scipy.optimize
 import openfermion
 import cirq
 
-# Relative imports from the package. This code is needed for the imports to
-# work even if this file is run as a script.
-
+"""
+# Relative imports from the package. 
+# This code is needed for the imports to work even if this file is run as a script.
 # pylint: disable=wrong-import-position
 ROOT_DIR = os.path.dirname(os.path.dirname(os.path.dirname(
     os.path.abspath(__file__))))
 sys.path.append(ROOT_DIR)
+"""
 
-from qml_model.ansatz_functions.ucc_functions import (
+from utils.ansatz_functions.ucc_functions import (
     generate_ucc_amplitudes,
     generate_circuit_from_pauli_string,
     generate_ucc_operators)
-from qml_model.vqe_functions.vqe_optimize_functions import (
+from utils.vqe_functions.vqe_optimize_functions import (
     circuit_state_fidelity,
     circuit_state_expval)
-from qml_model.utils import (
+from utils import (
     load_data,
     load_ucc_data,
     MOLECULES_DIR,
