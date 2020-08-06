@@ -259,7 +259,6 @@ class tfq_model():
             with open(path, 'rb') as f:
                 dataset = pickle.load(f)
                 self.classical_input_shape = dataset[1][0].shape
-                print(self.classical_input_shape)
                 return dataset[0], dataset[1], \
                     dataset[2], dataset[3], \
                     dataset[4], dataset[5]
