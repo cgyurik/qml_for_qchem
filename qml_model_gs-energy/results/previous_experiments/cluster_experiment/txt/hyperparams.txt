@@ -1,0 +1,1 @@
+reuploads:3, qubits:2, and depth:3

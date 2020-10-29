@@ -1,0 +1,1 @@
+uploads: 2, var_qubits: 0 and var_depth: 3
