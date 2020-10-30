@@ -39,39 +39,3 @@ def tensorable_ucc_circuit(filename: str) -> cirq.Circuit:
     c.append(tfq.util.exponential(pauli_str_list))
 
     return c
-
-class SplitBackpropQ(tf.keras.layers.Layer):
-
-    def __init__(self, upstream_symbols, managed_symbols, managed_init_vals, operators):
-        """Create a layer that splits backprop between several variables.
-
-        Args:
-            upstream_symbols: Python iterable of symbols to bakcprop
-                through this layer.
-            managed_symbols: Python iterable of symbols to backprop
-                into variables managed by this layer.
-            managed_init_vals: Python iterable of initial values
-                for managed_symbols.
-            operators: Python iterable of operators to use for expectation.
-        """
-        super().__init__(SplitBackpropQ)
-        self.all_symbols = upstream_symbols + managed_symbols
-        self.upstream_symbols = upstream_symbols
-        self.managed_symbols = managed_symbols
-        self.managed_init = managed_init_vals
-        self.ops = operators
-
-    def build(self, input_shape):
-        self.managed_weights = self.add_weight(
-            shape=(1, len(self.managed_symbols)),
-            initializer=tf.constant_initializer(self.managed_init))
-
-    def call(self, inputs):
-        # inputs are: circuit tensor, upstream values
-        upstream_shape = tf.gather(tf.shape(inputs[0]), 0)
-        tiled_up_weights = tf.tile(self.managed_weights, [upstream_shape, 1])
-        joined_params = tf.concat([inputs[1], tiled_up_weights], 1)
-        return tfq.layers.Expectation()(inputs[0],
-                                        operators=ops,
-                                        symbol_names=self.all_symbols,
-                                        symbol_values=joined_params)

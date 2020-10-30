@@ -33,7 +33,6 @@ from utils.tfq_utils import *
 
 """
 [TODO]    
-    - Implement "encoding circuit".
     - Re-add serial model.
     - Reinitialize ham_qubits in groundstate when reuploading (i.e., use fewer qubits in serial model).
 """
@@ -46,13 +45,12 @@ class tfq_model():
     - n_gs_uploads: number of groundstates (i.e., quantum input) fed to the qml model.
     - intermediate_readouts: allow readouts after each reupload (i.e., parallel or serial pqcs).
     """
-    def __init__(self, n_gs_uploads=2, n_aux_qubits=2, model_circuit_depth=1, var_depth=2,
+    def __init__(self, n_gs_uploads=2, n_aux_qubits=2, var_depth=2,
                 dir_path=None, print_circuit=False, print_summary=False, plot_to_file=False,
                 processed_data=None):
         ## Setting hyperparameters.
         self.n_gs_uploads = n_gs_uploads
         self.n_aux_qubits = n_aux_qubits
-        self.model_circuit_depth = model_circuit_depth
         self.var_depth = var_depth
 
         ## Initializing qubits and observables.
@@ -67,7 +65,7 @@ class tfq_model():
         self.train_input = [dataset[0], dataset[1][0], dataset[1][1], dataset[1][2], dataset[1][3]] 
         self.test_input = [dataset[2], dataset[3][0], dataset[3][1], dataset[3][2], dataset[3][3]]
         self.train_labels = dataset[4]
-        self.train_labels = dataset[5]
+        self.test_labels = dataset[5]
         
         ## Setting dir_path for reporting output
         self.dir_path = dir_path
@@ -75,7 +73,7 @@ class tfq_model():
         ## Initializing components of the model.    
         print("Setting up components of the model.")
         print("  - pqc.")        
-        self.model_circuit = self.create_model_circuit(print_circuit=print_circuit)
+        self.pqc = self.create_model_circuit(print_circuit=print_circuit)
         print("  - controller nn.")        
         self.controller_nn = self.create_controller_nn()
         print("  - postprocess nn.")  
@@ -89,23 +87,16 @@ class tfq_model():
     """
     def create_model_circuit(self, print_circuit=False):
         # Creating symbols.
-        n_enc_symbols_layer = 2 * self.n_qubits * (1 + 1)
         n_var_symbols_layer = 2 * self.n_qubits * (self.var_depth + 1)
-        n_enc_symbols = n_enc_symbols_layer * self.model_circuit_depth
-        n_var_symbols = n_var_symbols_layer * self.model_circuit_depth
-        self.enc_symbols = sympy.symbols('enc_circuit0:' + str(n_enc_symbols))
-        self.var_symbols = sympy.symbols('pqc0:' + str(n_var_symbols))
+        self.var_symbols = sympy.symbols('pqc0:' + str(n_var_symbols_layer * self.n_gs_uploads))
     
         # Creating the (parallel) model circuits
         model_circuits = []
         for i in range(self.n_gs_uploads):
             ith_model_circuit = cirq.Circuit()
-            for d in range(self.pqc_depth):
-                enc_symbols_layer = self.enc_symbols[d * n_enc_symbols_layer : (d+1) * n_enc_symbols_layer]
-                var_symbols_layer = self.var_symbols[d * n_var_symbols_layer : (d+1) * n_var_symbols_layer]
-                ith_model_circuit += pqc.encoding_circuit(self.qubits, enc_symbols_layer)
-                ith_model_circuit += pqc.variational_circuit(self.qubits, var_symbols_layer,
-                                                                depth=self.var_depth)    
+            var_symbols_layer = self.var_symbols[i * n_var_symbols_layer : (i+1) * n_var_symbols_layer]
+            ith_model_circuit += pqc.variational_circuit(self.qubits, var_symbols_layer,
+                                                                                    depth=self.var_depth)    
             model_circuits.append(ith_model_circuit)
 
         ## Printing the circuit(s).
@@ -168,46 +159,36 @@ class tfq_model():
         classical_input.append(tf.keras.Input(shape=(4,), dtype=tf.dtypes.float32, 
                                                     name='orbital_energies'))
 
-        ## Setting up seperate NN for each of the geometry triplets.
+        ## Setting up seperate NN to preprocess each of the geometry triplets.
         preprocessed_geometries = []
         for i in range(3):
-            preprocess_geometries.append(
+            preprocessed_geometries.append(
                 tf.keras.layers.Dense(1, input_shape=(3,),name='geometry_nn_' + str(i))(classical_input[i])
                 )
-        #geometries = tf.keras.layers.concatenate(preprocess_geom, name='preprocessed_geometries')
-        ## Classical params are processed geometry triplets and orbital energies.
-        encoding_params = tf.keras.layers.concatenate(preprocess_geom + classical_input[3], 
-                                                        name='processed_classical_parameters')
-        variational_params = [tf.Variable(trainable=True) for i in range(len(self.var_symbols))]
+        geometries = tf.keras.layers.concatenate(preprocessed_geometries, name='processed_geometries')
+        processed_classical_input = tf.keras.layers.concatenate([geometries, classical_input[3]],
+                                                                      name='processed_classical_input')
 
         ## Setting up controller nn(s) & controlled encoding_circuits(s) and connecting them to input layer.
-        preprocess_nn = [self.controller_nn[i](classical_params) for i in range(self.n_gs_uploads)]
+        preprocess_nn = [self.controller_nn[i](processed_classical_input) for i in range(self.n_gs_uploads)]
         
-        # https://github.com/tensorflow/quantum/issues/267 & https://github.com/tensorflow/quantum/issues/249
-        unused = tfq.layers.AddCircuit()(quantum_input, append=self.model_circuits[0])
-        expectation = SplitBackpropQ(self.var_symbols, self.encoding_symbols, [0]*len(self.encoding_symbols),
-                             self.readouts)([unused, preprocess_nn])
-        
-        """
+        ## Setting up the controlledPQCs
         pqc_layers = []
         # connecting each controller nn & quantum input to the corresponding pqc.
         for i in range(self.n_gs_uploads):
             pqc_id = 'pqc'+str(i)
             pqc_layers.append(
-                tfq.layers.ControlledPQC(self.encoding_circuit[i], operators=self.readouts, 
+                tfq.layers.ControlledPQC(self.pqc[i], operators=self.readouts, 
                                             name=pqc_id)([quantum_input, preprocess_nn[i]])
-            )
-               
-
+                            )
         # if multiple reuploads, concatenate outcomes.
         if self.n_gs_uploads > 1:
             pqc_expectation = tf.keras.layers.concatenate(pqc_layers, name='readout_concatenate')
         else:
             pqc_expectation = pqc_layers[0]
-        """
         
-        ## Connecting PQC to 'postprocess NN'
-        postprocess_input = tf.keras.layers.concatenate([expectation, classical_params],
+        ## Connecting controlledPQC to 'postprocess NN'
+        postprocess_input = tf.keras.layers.concatenate([pqc_expectation, processed_classical_input],
                                                            name='postprocess_input')
         postprocess_nn = self.postprocess_nn(postprocess_input)
             
@@ -412,10 +393,6 @@ class tfq_model():
         # Pickling the dict.
         print("Creating pickle of processed data for quicker loading.")
         data_id = 'H4_processed_'
-        if self.intermediate_readouts:
-            data_id += 'parallel_' + str(len(dataset))
-        else:
-            data_id += 'serial_' + str(self.n_gs_uploads) + '_' + str(len(dataset))
         pickle_path = "./data/" + data_id + '.p' 
         with open(pickle_path, 'wb') as f:      
             pickle.dump(processed_dataset, f)    

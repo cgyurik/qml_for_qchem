@@ -85,25 +85,4 @@ def pool_circuit(source_bits, sink_bits, symbols):
         circuit += two_qubit_pool(source, sink, two_qubit_symbols)
     return circuit
 
-"""
-[TODO] Implement encoding circuit.
-"""
-def encoding_circuit(qubits, enc_symbols):
-    return variational_circuit(qubits, enc_symbols, depth=1)
 
-
-"""
-# Initialize circuit.
-    pqc = cirq.Circuit()
-    # Add layers to the PQC.
-    for i in range(depth):
-        # Symbols of current layer.
-        layer_enc_symbols = enc_symbols[i * m : (i+1) * m]
-        layer_var_symbols = var_symbols[i * m : (i+1) * m]
-        # Append encoding circuit.
-        pqc += variational_circuit(qubits, layer_enc_symbols, depth=1) # TODO!
-        # Append variational circuit.
-        pqc += variational_circuit(qubits, layer_var_symbols, depth=var_depth)
-
-    return pqc
-"""

@@ -13,9 +13,9 @@ import matplotlib.pyplot as plt
 """
 Hyperparameters
 """
-n_uploads = 2 
-n_var_qubits= 0
-var_depth= 3
+n_gs_uploads = 1 
+n_aux_qubits= 0
+var_depth= 1
 
 """ 
 Setting up directory
@@ -24,7 +24,7 @@ print("-----Setting up directories-----")
 # Creating directory.
 dt_string = datetime.now().strftime('%d-%m_%H%M')
 #dir_path = './results/' + dt_string
-dir_path = './results/test'
+dir_path = './results/simple_QML_model'
 if os.path.exists(dir_path):
     print("Directory already exists; Aborting!")
     exit()
@@ -36,8 +36,8 @@ os.mkdir(dir_path + '/checkpoints')
 os.mkdir(dir_path + '/loss')
 # Reporting hyperparameters.
 with open(dir_path + '/txt/hyperparams.txt', 'w') as f:
-    hyperparams_txt = "uploads: " + str(n_uploads)
-    hyperparams_txt += ", var_qubits: " + str(n_var_qubits) 
+    hyperparams_txt = "n_gs_uploads: " + str(n_gs_uploads)
+    hyperparams_txt += ", n_aux_qubits: " + str(n_aux_qubits) 
     hyperparams_txt += " and var_depth: " + str(var_depth)
     print(hyperparams_txt, file=f)
 print("Success!")
@@ -47,7 +47,7 @@ print("Success!")
 Setting up the model.
 """
 print("-----Setting up model-----")
-model = tfq_model(n_gs_uploads=2, n_aux_qubits=0, model_circuit_depth=2, var_depth=2,
+model = tfq_model(n_gs_uploads=n_gs_uploads, n_aux_qubits=n_aux_qubits, var_depth=var_depth,
                     dir_path=dir_path, print_summary=True, 
                     processed_data='H4_processed_parallel_3'
                     )
