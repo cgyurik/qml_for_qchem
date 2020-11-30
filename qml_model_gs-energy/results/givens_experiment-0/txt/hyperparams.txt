@@ -1,1 +1,0 @@
-n_gs_uploads: 1, n_aux_qubits: 0 and var_depth: 0
