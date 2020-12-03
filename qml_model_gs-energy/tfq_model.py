@@ -236,6 +236,8 @@ class tfq_model():
                 datapoint.update({'gs_circuit' : gs_circuit})
                 dataset.append(datapoint) 
                 print("    * read molecule", len(dataset), ".")
+                if len(dataset) == 2:
+                    break
                 
         ## Removing degenerate molecules
         dataset = [dataset[j] for j in range(len(dataset)) if dataset[j]['multiplicity'] == 1]

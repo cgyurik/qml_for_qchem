@@ -14,7 +14,7 @@ import matplotlib.pyplot as plt
 """
 Run QML model experiments with given hyperparameters
 """
-def experiment(n_gs_uploads, n_aux_qubits, var_depths, dir_prefix, epochs=500, processed_data=None):
+def experiment(n_gs_uploads, n_aux_qubits, var_depths, dir_prefix, epochs=250, processed_data=None):
     for i in range(len(n_gs_uploads)):
         """ 
         Setting up directory
@@ -54,8 +54,8 @@ def experiment(n_gs_uploads, n_aux_qubits, var_depths, dir_prefix, epochs=500, p
         cp_callback = tf.keras.callbacks.ModelCheckpoint(filepath=checkpoint_path, save_weights_only=True) 
 
         ## Loading weights from previous experiment.
-        #print("Loading weights")
-        #model.tfq_model.load_weights("./??")
+        print("Loading weights")
+        qml_model.tfq_model.load_weights("./results/givens_experiment-0/final_weights")
 
         print("-----Fitting quantum model.------")
         history = qml_model.tfq_model.fit(x=qml_model.train_input,
@@ -74,8 +74,8 @@ if __name__ == "__main__":
     """
     Hyperparameters
     """
-    n_gs_uploads = [1, 2, 3] 
-    n_aux_qubits= [0, 0, 0]
-    var_depths= [0, 0, 0]
+    n_gs_uploads = [1] 
+    n_aux_qubits= [0]
+    var_depths= [0]
 
-    experiment(n_gs_uploads, n_aux_qubits, var_depths, 'givens_experiment')
+    experiment(n_gs_uploads, n_aux_qubits, var_depths, 'givens_experiment_extended')
