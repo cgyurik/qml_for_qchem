@@ -1,6 +1,7 @@
 ## os/sys tools
 import os, sys
 from functools import partial
+from itertools import combinations
 # disable terminal warning tf
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 # general tools
@@ -44,19 +45,23 @@ class tfq_model():
     - n_gs_uploads: number of groundstates (i.e., quantum input) fed to the qml model.
     - intermediate_readouts: allow readouts after each reupload (i.e., parallel or serial pqcs).
     """
-    def __init__(self, n_gs_uploads=2, n_aux_qubits=2, var_depth=2, normalize_data=False,
-                dir_path=None, print_circuit=False, print_summary=False, plot_to_file=False,
-                processed_data=None):
+    def __init__(self, n_gs_uploads=2, n_aux_qubits=2, var_depth=2, controller_hidden_layers=[3],
+                normalize_data=False, dir_path=None, print_circuit=False, print_summary=False, 
+                plot_to_file=False, processed_data=None):
         ## Setting hyperparameters.
         self.n_gs_uploads = n_gs_uploads
         self.n_aux_qubits = n_aux_qubits
         self.var_depth = var_depth
+        self.controller_hidden_layers = controller_hidden_layers
 
         ## Initializing qubits and observables.
         self.n_ham_qubits = 8
         self.n_qubits = self.n_ham_qubits + self.n_aux_qubits     
         self.qubits = cirq.GridQubit.rect(1, self.n_qubits)
-        self.readouts = [cirq.Z(bit) for bit in self.qubits]       
+        # one-body measurements.
+        self.readouts = [cirq.Z(i) for i in self.qubits]
+        # two-body correlators.
+        self.readouts += [cirq.PauliString([cirq.Z(i), cirq.Z(j)]) for (i, j) in combinations(self.qubits,2)]
         
         ## Reading H4 data
         print("Loading data.")
@@ -123,11 +128,10 @@ class tfq_model():
         controllers = []
         for i in range(self.n_gs_uploads):
             ith_controller = tf.keras.Sequential(
-                                [#tfmot.sparsity.keras.prune_low_magnitude(
-                                    tf.keras.layers.Dense(n_params, input_shape=(7,))
-                                #)
-                                ],
-                            name='controller_nn_' + str(i))
+                                [tf.keras.layers.Dense(self.controller_hidden_layers[0], input_shape=(4,))]
+                                + [tf.keras.layers.Dense(self.controller_hidden_layers[i]) 
+                                                for i in range(1, len(self.controller_hidden_layers) - 1)]
+                                + [tf.keras.layers.Dense(n_params)], name='controller_nn_' + str(i))
             controllers.append(ith_controller)
                
         return controllers
@@ -138,7 +142,7 @@ class tfq_model():
     def create_postprocess_nn(self):  
         # Computing the right input shape
         q_shape = (len(self.readouts) * self.n_gs_uploads, )
-        c_shape = (7,)
+        c_shape = (4,)
         input_shape = tuple(map(sum, zip(q_shape, c_shape))) # (x, ) , (y, ) -> (x + y, )
         
         # Setting-up postprocess_nn
@@ -162,14 +166,22 @@ class tfq_model():
                                                     name='orbital_energies'))
 
         ## Setting up seperate NN to preprocess each of the geometry triplets.
-        preprocessed_geometries = []
+        processed_geometries = []
         for i in range(3):
-            preprocessed_geometries.append(
+            processed_geometries.append(
                 tf.keras.layers.Dense(1, input_shape=(3,),name='geometry_nn_' + str(i))(classical_input[i])
                 )
-        geometries = tf.keras.layers.concatenate(preprocessed_geometries, name='processed_geometries')
-        processed_classical_input = tf.keras.layers.concatenate([geometries, classical_input[3]],
+        
+        ## Setting up an NN to preprocess the orbital energies.
+        processed_orbital_energy = tf.keras.layers.Dense(1, input_shape=(4,), 
+                                                            name='orbital_energy_nn')(classical_input[3])
+        ## Concatenating all proceseed classical inputs.
+        processed_classical_input = tf.keras.layers.concatenate([processed_geometries[0], 
+                                                                    processed_geometries[1], 
+                                                                    processed_geometries[2],
+                                                                    processed_orbital_energy],
                                                                       name='processed_classical_input')
+
 
         ## Setting up controller nn(s) & controlled encoding_circuits(s) and connecting them to input layer.
         preprocess_nn = [self.controller_nn[i](processed_classical_input) for i in range(self.n_gs_uploads)]
@@ -236,8 +248,8 @@ class tfq_model():
                 datapoint.update({'gs_circuit' : gs_circuit})
                 dataset.append(datapoint) 
                 print("    * read molecule", len(dataset), ".")
-                if len(dataset) == 2:
-                    break
+                #if len(dataset) == 2:
+                #    break
                 
         ## Removing degenerate molecules
         dataset = [dataset[j] for j in range(len(dataset)) if dataset[j]['multiplicity'] == 1]

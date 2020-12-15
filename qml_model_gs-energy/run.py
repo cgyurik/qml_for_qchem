@@ -14,14 +14,15 @@ import matplotlib.pyplot as plt
 """
 Run QML model experiments with given hyperparameters
 """
-def experiment(n_gs_uploads, n_aux_qubits, var_depths, dir_prefix, epochs=250, processed_data=None):
+def experiment(n_gs_uploads, n_aux_qubits, var_depths, controller_hidden_layers, 
+                    dir_prefix, epochs=250, processed_data=None):
     for i in range(len(n_gs_uploads)):
         """ 
         Setting up directory
         """
         print("-----Setting up directories-----")
         #dir_path = './results/' + dt_string
-        dir_path = './results/' + dir_prefix + '-' + str(i)
+        dir_path = './results/' + dir_prefix + '-' + str(n_gs_uploads[i])
         if os.path.exists(dir_path):
             print("Directory already exists; Aborting!")
             exit()
@@ -41,8 +42,8 @@ def experiment(n_gs_uploads, n_aux_qubits, var_depths, dir_prefix, epochs=250, p
 
         print("-----Setting up model-----")
         qml_model = tfq_model(n_gs_uploads=n_gs_uploads[i], n_aux_qubits=n_aux_qubits[i],
-                                var_depth=var_depths[i], normalize_data=True, 
-                                dir_path=dir_path, print_summary=True,              
+                                var_depth=var_depths[i], controller_hidden_layers=controller_hidden_layers[i],
+                                normalize_data=True, dir_path=dir_path, print_summary=True,              
                                 processed_data=processed_data)
 
         print("Compiling model.")
@@ -54,8 +55,8 @@ def experiment(n_gs_uploads, n_aux_qubits, var_depths, dir_prefix, epochs=250, p
         cp_callback = tf.keras.callbacks.ModelCheckpoint(filepath=checkpoint_path, save_weights_only=True) 
 
         ## Loading weights from previous experiment.
-        print("Loading weights")
-        qml_model.tfq_model.load_weights("./results/givens_experiment-0/final_weights")
+        #print("Loading weights")
+        #qml_model.tfq_model.load_weights("./results/givens_experiment-0/final_weights")
 
         print("-----Fitting quantum model.------")
         history = qml_model.tfq_model.fit(x=qml_model.train_input,
@@ -66,7 +67,7 @@ def experiment(n_gs_uploads, n_aux_qubits, var_depths, dir_prefix, epochs=250, p
                                             validation_data=(qml_model.test_input, qml_model.test_labels)
                                             )
         print("Success!")
-        print("------Saving results.-----")
+        print("------Saving results and benchmarking model.-----")
         save_results(qml_model, history, dir_path)
         benchmark_model(qml_model, dir_path, c_layer_sizes=[10, 8])
         
@@ -74,8 +75,9 @@ if __name__ == "__main__":
     """
     Hyperparameters
     """
-    n_gs_uploads = [1] 
-    n_aux_qubits= [0]
-    var_depths= [0]
+    n_gs_uploads = [3, 5, 7, 9] 
+    n_aux_qubits= [0, 0, 0, 0]
+    var_depths= [0, 0, 0, 0]
+    controller_hidden_layers = [[3], [2], [1], [1]]
 
-    experiment(n_gs_uploads, n_aux_qubits, var_depths, 'givens_experiment_extended')
+    experiment(n_gs_uploads, n_aux_qubits, var_depths, controller_hidden_layers, 'givens_experiment')

@@ -32,8 +32,10 @@ def benchmark_model(qml_model, dir_path, tfq_weights=None, c_layer_sizes=[8], ep
     c_model.compile(optimizer=tf.keras.optimizers.Adam(), loss=tf.losses.mse)
     c_model.summary()
     print("  - fitting classical model.")
-    history = c_model.fit(qml_model.train_input[1:5], qml_model.train_labels, epochs=epochs, verbose=1)
-    
+    history = c_model.fit(x=qml_model.train_input[1:5], y=qml_model.train_labels, epochs=epochs, verbose=1,
+                            validation_data=(qml_model.test_input[1:5], qml_model.test_labels))
+    print(history.history['val_loss'])     
+        
     ## Loading weights.
     if tfq_weights is not None:
         q_model.tfq_model.load_weights(tfq_weights)
