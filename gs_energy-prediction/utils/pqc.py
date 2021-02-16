@@ -2,71 +2,61 @@ import numpy as np
 import cirq, sympy, openfermion, openfermioncirq
 
 """
-Make a Cirq circuit for the Given layer/ansatz.
+Generator of a Cirq circuit for the Given layer/ansatz.
 """
-def parametrized_givens_ansatz(qubits, thetas, spin_basis=False):
+def givens_generator(qubits, params, spin_basis=False):
     if spin_basis:
         N = len(qubits) // 2
-        if len(thetas) != (N * (N-1))/2:
+        if len(params) != (N * (N-1))/2:
             raise ValueError('Wrong number of parameters or qubits.')
         def gen():
-            for i, theta in zip(
-                (list(range(0, N-1, 2)) + list(range(1, N-1, 2)))*N,
-                thetas):
+            for i, theta in zip((list(range(0, N-1, 2)) + list(range(1, N-1, 2)))*N, params):
                 for sigma in [0, 1]:
-                    yield openfermioncirq.Ryxxy(-theta).on(qubits[2*i+sigma], 
-                                           qubits[2*i+2+sigma])
+                    yield openfermioncirq.Ryxxy(-theta).on(qubits[2*i+sigma], qubits[2*i+2+sigma])
                  # TODO: this is not a FSWAP under JW.
     else:
         N = len(qubits)
-        if len(thetas) != (N * (N-1))/2:
+        if len(params) != (N * (N-1))/2:
             raise ValueError('Wrong number of parameters or qubits.')
         def gen():
-            for i, theta in zip(
-                (list(range(0, N-1, 2)) + list(range(1, N-1, 2)))*N,
-                thetas):
+            for i, theta in zip((list(range(0, N-1, 2)) + list(range(1, N-1, 2)))*N, params):
                 yield openfermioncirq.Ryxxy(-theta).on(qubits[i], qubits[i+1])
     return gen()
-  
+ 
 """
-Make a Cirq circuit for spin conserving Given layer/ansatz.
-[TODO] Make it work with symbols to integrate with TFQ.
-"""  
-def parametrized_spin_conserving_givens_ansatz(qubits, thetas, spinless=False):
-    if spinless:
-        N = len(qubits)
-        if len(thetas) != (N * (N-1))/2:
-            raise ValueError('Wrong number of parameters or qubits.')
+Simple wrapper to return circuit instead of generator
+"""
+def givens_ansatz(qubits, params, spin_basis=False):
+    return cirq.Circuit(givens_ansatz_generator(qubits, params, spin_basis=spin_basis))
+  
+'''
+Generator of a Cirq circuit for the spinconserving Given layer/ansatz.
+where m = n * (n - 1)`, and n = len(qubits) // 2.
+'''
+def spinconserving_givens_generator(qubits, params):
+    if len(qubits) % 2:
+        raise ValueError('The number of qubits should be even')
+    params = []
+    j = 0
+    for i in range((n_qubits*(n_qubits-1))//2):
+        if i < n_qubits//2:
+            params.append(0)
+            continue
+        p = i // (n_qubits - 1)
+        q = (2 * i) % (n_qubits - 1)
+        if (q < 2*p) != ((n_qubits - (q + 2)) < 2*p):
+            params.append(sympy.Symbol(f'θ{j}'))
+            j+=1
+            continue
+        params.append(np.pi/2)
+    return givens_ansatz(qubits, params)
 
-        matr = np.eye(N)
-        for i, theta in zip(
-            (list(range(0, N-1, 2)) + list(range(1, N-1, 2)))*N,
-            thetas):
-            givens = np.eye(N)
-            givens[i:i+2, i:i+2] = [[ np.cos(-theta), np.sin(-theta)], 
-                                    [-np.sin(-theta), np.cos(-theta)]]
-            matr = givens @ matr
-        #print(matr.round(3)) # TESTING
-    else:
-        N = len(qubits) // 2 # number of spatial orbitals
-        if len(thetas) != (N * (N-1))/2:
-            raise ValueError('Wrong number of parameters or qubits.')
-
-        matr = np.eye(2*N)
-        for i, theta in zip(
-            (list(range(0, N-1, 2)) + list(range(1, N-1, 2)))*N,
-            thetas):
-            givens = np.eye(2*N)
-            for sigma in [0, 1]:
-                i0 = 2*i+sigma
-                i1 = 2*(i+1)+sigma
-                givens[i0, i0] = np.cos(-theta)
-                givens[i0, i1] = np.sin(-theta) 
-                givens[i1, i0] = -np.sin(-theta)
-                givens[i1, i1] = np.cos(-theta)
-            matr = givens @ matr
-        #print(matr.round(3)) # TESTING
-    return openfermion.optimal_givens_decomposition(qubits, matr)
+"""
+Simple wrapper to return circuit instead of generator
+"""
+def spinconserving_givens_ansatz(qubits, params):
+    return cirq.Circuit(spinconserving_givens_generator(qubits, params))
+  
 
 """
 Layer of single qubit z-rotations
@@ -95,7 +85,7 @@ def entangling_layer_linear(qubits):
 """    
 Construct variational part of the PQC.
 """
-def variational_circuit(qubits, symbols, depth=2):
+def hardware_efficient_ansatz(qubits, symbols, depth=2):
     if len(symbols) != 2 * len(qubits) * (depth + 1):
         raise ValueError("Symbols should be of dimension 2 * n_qubits * (var_depth + 1).")
     for d in range(depth):

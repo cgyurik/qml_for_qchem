@@ -97,16 +97,12 @@ class tfq_model():
         # Creating the (parallel) model circuits
         model_circuits = []
         for i in range(self.n_gs_uploads):
-            ith_model_circuit = cirq.Circuit()
             var_symbols_upload = self.var_symbols[i * n_var_symbols_upload : (i+1) * n_var_symbols_upload]
-            #ith_model_circuit += pqc.variational_circuit(self.qubits, var_symbols_layer,
+            #ith_circuit = pqc.hardware_efficient_ansatz(self.qubits, var_symbols_upload,
             #                                                                        depth=self.var_depth)    
-            ith_model_circuit = cirq.Circuit(pqc.parametrized_givens_ansatz(self.qubits, var_symbols_upload))
-            #ith_model_circuit = cirq.Circuit(pqc.parametrized_spin_conserving_givens_ansatz(
-            #                                                                            self.qubits,
-            #                                                                            var_symbols_upload
-            #                                                                                ))
-            model_circuits.append(ith_model_circuit)
+            #ith_circuit = pqc.givens_ansatz(self.qubits, var_symbols_upload)
+            ith_circuit = pqc.spinconserving_givens_ansatz(self.qubits, var_symbols_upload)
+            model_circuits.append(ith_circuit)
 
         ## Printing the circuit(s).
         if print_circuit:   
