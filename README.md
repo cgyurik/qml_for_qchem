@@ -1,4 +1,4 @@
-# convoQC
+# QML for QChem
 Using quantum convolutional neural networks (QCNN) to predict quantum chemistry properties
 
 
