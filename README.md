@@ -1,13 +1,24 @@
 # QML for QChem
-Using quantum convolutional neural networks (QCNN) to predict quantum chemistry properties
+All code for the "Quantum Machine Learning for Quantum Chemistry" project. 
 
 
 ## This repository
 
-Contents of the main code folder `qml_model`:
-- `notebooks/`: Notebooks explaining the data and benchmarking experiments with a simple neural network.
-- `utils` directory: scripts used for generating/loading data.
-- `data` directory: all data of generated molecules (in subdirs `molecules` and `json`).
+Contents of the code folder `gs_energy-prediction`:
+- `run.py`: executable python file that performs an groundstate energy prediction experiment.
+- `tfq_model.py`: python file containing the main class for the QML model in the groundstate energy prediction experiment.
+- `notebooks`: directory containing jupyter-notebooks explaining the data and benchmarking experiments with classical models.
+- `utils` directory containing files for generating/loading data, vqe optimization and pqc ansatzes.
+- `data` directory containing all data of generated molecules.
+
+Contents of the code folder `vqe-surrogate`:
+- `main.py`: executable python file that performs an vqe surrogate experiment.
+- `vqe.py`: python file containing the main class for the vqe with surrogate cost function.
+- `qml_model`: directory containing python files for the QML model that implements the surrogate vqe cost function.
+- `molecules`: directory containing a family of H4 molecules to use for the vqe with surrogate experiments.
+- `vqe_utils` directory containing python files for vqe functionalities.
+- `results` directory containing all results from previous experiments.
+
 
 Additionally, at the root level of this repository, we find:
 - `figures` directory: figures for use in this README file etc.
@@ -16,9 +27,9 @@ Additionally, at the root level of this repository, we find:
 
 ---
 
-## Generic definition of the problem:
+## Definition of the groundstate energy prediction problem:
 
-### Goal: 
+### Initial Goal: 
 For a family of chemical Hamiltonians (i.e., molecules), use a QML model to **predict some property of the molecules**. 
 The QML model takes as an input *K* copies of a quantum state *ρ* (encoding some properties of the molecule) and some classical information on the molecule, and outputs the best estimate of property to predict.
 
@@ -73,9 +84,4 @@ The fermionic states are represented in the canonical orbital basis, and mapped 
 
 **Model output**:
 - Estimate of the ground state energy of the instance molecule.
-
-### Goals
-
-- **Minimal**: obtaining a energy estimate better than the Hartree-Fock energy.
-- **Good result**: accuracy comparable/better than a VQE estimation.
 
