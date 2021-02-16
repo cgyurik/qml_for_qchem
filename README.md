@@ -29,9 +29,9 @@ Additionally, at the root level of this repository, we find:
 
 ## Definition of the groundstate energy prediction problem:
 
-### Initial Goal: 
-For a family of chemical Hamiltonians (i.e., molecules), use a QML model to **predict some property of the molecules**. 
-The QML model takes as an input *K* copies of a quantum state *ρ* (encoding some properties of the molecule) and some classical information on the molecule, and outputs the best estimate of property to predict.
+### Main Objective: 
+For a family of chemical Hamiltonians, use a QML model to *predict some property of the molecules*. 
+The QML model takes as an input copies of a quantum state *ρ* (encoding some properties of the molecule) and some classical information on the molecule, and outputs the best estimate of property to predict.
 
 ![structure -> property diagram](figures/diagram.png)
 
@@ -84,4 +84,10 @@ The fermionic states are represented in the canonical orbital basis, and mapped 
 
 **Model output**:
 - Estimate of the ground state energy of the instance molecule.
+
+---
+
+## VQE surrogate.
+
+We try to train the above described QML model to predict the energy of a trail-state in a VQE optimization trajectory. This 'energy prediction' model is then used to serve as a surrogate cost function for the VQE, which is supposed to be cheaper in terms of the number of measured observables.
 
