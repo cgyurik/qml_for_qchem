@@ -1,0 +1,2 @@
+- Average final training loss: 0.21635236859321597
+- Average final validation loss: 0.21424142038822175

@@ -1,0 +1,2 @@
+    * final training loss: 1.2242019557952881
+    * average loss over new part trajectory: 1.104806077156013

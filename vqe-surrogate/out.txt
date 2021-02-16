@@ -1,0 +1,41 @@
+-----Initializing VQE with surrogate-----
+Molecule name: H4_STO-3G_singlet
+Number of parameters: 52
+Setting up components of the model.
+  - pqc.
+Connecting components of the model.
+Model: "surrogate_model"
+_________________________________________________________________
+Layer (type)                 Output Shape              Param #   
+=================================================================
+quantum_input (InputLayer)   [(None,)]                 0         
+_________________________________________________________________
+pqc (PQC)                    (None, 1)                 32        
+=================================================================
+Total params: 32
+Trainable params: 32
+Non-trainable params: 0
+_________________________________________________________________
+-----Training and Testing surrogate on random parameters-----
+Generating training/validation data.
+Training the surrogate.
+  - loading the data.
+    * converting circuits to tensors.
+  - fitting the QML model.
+Train on 2 samples, validate on 1 samples
+2/2 [==============================] - 4s 2s/sample - loss: 1.5519 - val_loss: 0.0985
+[array([1.6909027 , 4.50605   , 4.696632  , 5.618309  , 4.9623423 ,
+       3.8217573 , 3.0500543 , 5.1545515 , 1.77406   , 2.3319886 ,
+       2.812249  , 0.5615344 , 5.457081  , 4.8019505 , 2.6346023 ,
+       3.4192715 , 3.932103  , 2.475975  , 6.1729126 , 1.3138082 ,
+       0.03574453, 2.6071436 , 2.8803287 , 5.564761  , 2.0645456 ,
+       2.8295727 , 3.508755  , 5.0829973 , 3.724128  , 1.0885578 ,
+       0.1780366 , 0.6907146 ], dtype=float32)]
+Resolved the circuits.
+Generating final state.
+Measuring final state
+1.9763384823551733 1.9014407
+Resolved the circuits.
+Generating final state.
+Measuring final state
+1.7935575580750185 2.0402093
