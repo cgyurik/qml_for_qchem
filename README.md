@@ -89,5 +89,5 @@ The fermionic states are represented in the canonical orbital basis, and mapped 
 
 ## VQE surrogate.
 
-We try to train the above described QML model to predict the energy of a trail-state in a VQE optimization trajectory. This 'energy prediction' model is then used to serve as a surrogate cost function for the VQE, which is supposed to be cheaper in terms of the number of measured observables.
+We train the above QML model to predict the energy of a trail-state in a VQE optimization trajectory. This 'energy prediction' model is then used as a 'surrogate cost function' for the VQE, which is supposed to be cheaper in terms of the number of measured observables.
 
