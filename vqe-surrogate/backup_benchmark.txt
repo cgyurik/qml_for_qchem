@@ -1,0 +1,86 @@
+# Saving best fold to compare with classical model.
+            if history.history['val_loss'][-1] < best_val_loss:
+                train_labels = cur_vqe.surrogate.train_labels
+                train_params = cur_vqe.surrogate.train_params
+                test_params = cur_vqe.surrogate.test_params
+                q_train_predictions = cur_vqe.surrogate.tfq_model.predict(cur_vqe.surrogate.train_states,
+                                                                            verbose=1).flatten()
+                q_test_predictions = cur_vqe.surrogate.tfq_model.predict(cur_vqe.surrogate.test_states,
+                                                                            verbose=1).flatten()
+                best_val_loss = history.history['val_loss'][-1]
+                
+                
+        ## Reporting results.
+        print("Reporting results.")
+        # Writing average final losses to .txt
+        txt_name = './avg_losses_' + str(n_samples) + '_' + str(epochs) + '.txt'
+        avg_train_loss = np.mean([history.history['loss'][-1] for history in histories])
+        avg_val_loss = np.mean([history.history['val_loss'][-1] for history in histories])
+        with open(txt_name, 'w') as f:
+            print("- Average final training loss:", avg_train_loss, file=f)
+            print("- Average final validation loss:", avg_val_loss, file=f)
+        # Plotting training losses
+        for i in range(n_folds):
+            label = 'Training loss fold' + str(i) + '.'
+            plt.plot(histories[i].history['loss'], label=label)
+        plt.xlabel('Epoch.')
+        plt.ylabel('MSE of predicted energy.')
+        filename = './train_loss_' + str(depth) + '.png'
+        plt.savefig(filename)
+        plt.close()
+        # Plotting validation losses
+        for i in range(n_folds):
+            label = 'Validation loss fold' + str(i) + '.'
+            plt.plot(histories[i].history['val_loss'], label=label)
+        plt.xlabel('Epoch.')
+        filename = './val_loss_' + str(depth) + '.png'
+        plt.savefig(filename)
+        plt.close()
+
+        ## Comparing best fold against classical model.
+        print("Comparing best fold against classical model.")
+        layer_size = int(depth / 3) 
+        input_layer = tf.keras.Input(shape=(len(best_vqe.ansatz.symbols), ))
+        output = tf.keras.layers.Dense(layer_size)(input_layer)
+        output = tf.keras.layers.Dense(layer_size, activation='relu')(output)
+        output = tf.keras.layers.Dense(1)(output)
+        c_model = tf.keras.Model(inputs=input_layer, outputs=output, name="c_model")
+        c_model.compile(optimizer=tf.keras.optimizers.Adam(), loss=tf.losses.mse)
+        print("  - fitting classical model.")
+        history = c_model.fit(x=train_params, y=train_labels, epochs=epochs, verbose=1)    
+    
+        # Evaluating models on test sets
+        print("  - evaluating classical model.")
+        c_test_predictions = c_model.predict(test_params, verbose=1).flatten()
+        c_train_predictions = c_model.predict(train_params, verbose=1).flatten()
+     
+        ## Plotting comparisson.
+        # Training.
+        a = plt.axes(aspect='equal')
+        plt.scatter(best_vqe.surrogate.test_labels, q_test_predictions, label = 'Predicted by QML model')
+        plt.scatter(best_vqe.surrogate.test_labels, c_test_predictions, label = 'Predicted by CML model')
+        plt.xlabel('True energies [Ha]')
+        plt.ylabel('Energy by other method [Ha]')
+        lims = plt.gca().get_ylim()
+        plt.xlim(lims)
+        plt.ylim(lims)
+        plt.plot(lims, lims)
+        plt.legend()
+        path = './comparisson_' + str(n_samples) + '_' + str(epochs) + '.png'
+        plt.savefig(path)
+        plt.close()
+        
+        # Testing.
+        a = plt.axes(aspect='equal')
+        plt.scatter(best_vqe.surrogate.test_labels, q_test_predictions, label = 'Predicted by QML model')
+        plt.scatter(best_vqe.surrogate.test_labels, c_test_predictions, label = 'Predicted by CML model')
+        plt.xlabel('True energies [Ha]')
+        plt.ylabel('Energy by other method [Ha]')
+        lims = plt.gca().get_ylim()
+        plt.xlim(lims)
+        plt.ylim(lims)
+        plt.plot(lims, lims)
+        plt.legend()
+        path = './comparisson_' + str(n_samples) + '_' + str(epochs) + '.png'
+        plt.savefig(path)
+        plt.close()

@@ -19,8 +19,7 @@ import matplotlib.pyplot as plt
 class vqe():
     """
     Attributes: 
-    - n_atoms: number of H atoms on the line (has to be even to be singlet).
-    - bond_length: distance between H atoms (?)
+    - ...
     """
     def __init__(self, filename, n_uploads=1, var_depth=1, verbose=False):
         print("-----Initializing VQE with surrogate-----")
@@ -188,9 +187,17 @@ class vqe():
         plt.savefig('./vanilla_vqe.png')
         plt.close()
 
-    """ 
-    Train the VQE
-    """
+        
+## Test functions.
+if __name__ == "__main__":  
+    # Setting up a VQE instance.   
+    filename = "./molecules/molecule1"
+    vqe_test = vqe(filename, verbose=True)
+    
+    
+    
+"""
+    ## Train VQE using surrogate.
     def train_with_surrogate(self, vqe_maxiter=25, vqe_maxfev=250, surr_maxiter=10, epochs=25, n_iterations=20):
         print("----- Training VQE using surrogate-----")
         vqe_trajectories = []
@@ -245,10 +252,4 @@ class vqe():
         ax.axhline(y=self.true_gs_energy, label='true groundstate energy')
         plt.savefig('./vqe_with_surrogate.png')
         plt.close()
-
-        
-## Test functions.
-if __name__ == "__main__":  
-    # Setting up a VQE instance.   
-    filename = "./molecules/molecule1"
-    vqe_test = vqe(filename, verbose=True)
+"""
