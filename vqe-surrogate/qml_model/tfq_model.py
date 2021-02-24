@@ -143,7 +143,7 @@ class tfq_model():
     """
     Load VQE cost function evaluations dataset
     """
-    def load_data(self, data, vqe_ansatz, split=0.8334):
+    def load_data(self, data, vqe_ansatz, split=0.6667):
         ## Creating state prep. circuits from params
         processed_data = []
         for i in range(len(data)):
