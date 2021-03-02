@@ -17,37 +17,11 @@ from qml_model.tfq_model import tfq_model
 ## visualization tools
 import matplotlib.pyplot as plt
 
-""" 
-Train surrogate VQE cost function on randomized evaluations of VQE cost function.
-"""
-def train_surrogate_random(test_vqe, n_samples=100, epochs=15):
-    print("-----Training and Testing surrogate on random parameters-----")
-    ## Generating random data.
-    print("Generating training/validation data.")
-    random_data = []
-    for i in range(n_samples):
-        params = np.random.uniform(0, 2 * np.pi, len(test_vqe.ansatz.symbols))
-        random_data.append({"params": params, "energy": test_vqe.vqe_cost(params)})
-    
-    ## Training QML model (i.e., the surrogate)    
-    print("Training the surrogate.")
-    print("  - loading the data.")
-    test_vqe.surrogate.load_data(random_data, test_vqe.ansatz)
-    print("  - fitting the QML model.")
-    history = test_vqe.surrogate.tfq_model.fit(x=test_vqe.surrogate.train_states, 
-                                                    y=test_vqe.surrogate.train_labels,
-                                                    batch_size=32,
-                                                    epochs=epochs,
-                                                    verbose=1,
-                                                    validation_data=(test_vqe.surrogate.test_states, 
-                                                                    test_vqe.surrogate.test_labels))
-                             
-    return history
     
 """ 
 Train surrogate VQE cost function on randomized evaluations of VQE cost function.
 """
-def train_surrogate_random_neighborhood(test_vqe, radius=0.1, n_samples=100, epochs=15):
+def train_surrogate_random(test_vqe, radius=0.1, n_samples=100, epochs=15):
     print("-----Training and Testing surrogate on random parameters in neighbourhood-----")
     ## Generating random centre of sphere.
     print("Generating training/validation data.")
@@ -55,11 +29,14 @@ def train_surrogate_random_neighborhood(test_vqe, radius=0.1, n_samples=100, epo
     ## Generating random data in radius around center.
     random_data = []
     for i in range(n_samples):
-        params = np.zeros(len(test_vqe.ansatz.symbols))
-        for i in range(len(test_vqe.ansatz.symbols)):
-            params[i] = np.random.uniform(center[i] - radius, center[i] + radius)
+        if radius == 0:
+            params = np.random.uniform(0, 2 * np.pi, len(test_vqe.ansatz.symbols))
+        else:
+            params = np.zeros(len(test_vqe.ansatz.symbols))
+            for i in range(len(test_vqe.ansatz.symbols)):
+                params[i] = np.random.uniform(center[i] - radius, center[i] + radius)
         random_data.append({"params": params, "energy": test_vqe.vqe_cost(params)})
-    
+        
     ## Training QML model (i.e., the surrogate)    
     print("Training the surrogate.")
     print("  - loading the data.")
@@ -75,87 +52,58 @@ def train_surrogate_random_neighborhood(test_vqe, radius=0.1, n_samples=100, epo
                              
     return history    
         
+            
 """ 
 Hyperparameter sweep for the hardware-efficient ansatz.
 """  
-def hwe_experiment(molecule, depths=[3, 10, 25], n_samples=300, epochs=500):
+def hwe_experiment(molecule, depths=[3, 7, 13], radii=[0.01, 0.05, 0.1, 0.25, 0.5], n_samples=75, epochs=200):
     ##Setting up directory
     print("-----Setting up directories-----")
-    dir_path = './results/experiment_18-02'
+    dir_path = './results/experiment_02-03'
     if os.path.exists(dir_path):
         print("Directory already exists; Aborting!")
         exit()
     # Creating subdirectories.
     os.mkdir(dir_path)
+    os.mkdir(dir_path + '/data')
     os.mkdir(dir_path + '/weights')
     os.mkdir(dir_path + '/loss')
     print("Success!")
     ## Hyperparameter-sweep
     for depth in depths:
-        print("===== depth", depth, "=====")              
-        # Setting up VQE.
-        current_vqe = vqe(molecule, n_uploads=1, var_depth=depth)
-        # Training vqe surrogate on random data.
-        history = train_surrogate_random(current_vqe, n_samples=n_samples, epochs=epochs)
-        # Saving model parameters.
-        print("Saving the results.")
-        trained_weights = current_vqe.surrogate.pqc_layer.symbol_values()
-        filename =  '/weights/trained_weights-' + str(depth) + '.p'
-        with open(dir_path + filename, 'wb') as f:
-            pickle.dump(trained_weights, f)
-        # Saving training loss.
-        train_loss = history.history['loss'] 
-        filename =  '/loss/train_loss-' + str(depth) + '.p'
-        with open(dir_path + filename, 'wb') as f:      
-            pickle.dump(train_loss, f)
-        # Saving validation loss.
-        val_loss = history.history['val_loss']
-        filename =  '/loss/val_loss-' + str(depth) + '.p'
-        with open(dir_path + filename, 'wb') as f:   
-            pickle.dump(val_loss, f)
-        # Saving final losses
-        filename =  '/final_loss-' + str(depth) + '.txt'
-        with open(dir_path + filename, 'w') as f: 
-            loss_txt = "Training loss:" + str(train_loss[-1]) + " and Validation loss:" + str(val_loss[-1])
-            print(loss_txt, file=f)
-            
-""" 
-Hyperparameter sweep for the hardware-efficient ansatz.
-"""  
-def hwe_experiment_neighborhood(molecule, depths=[3, 10, 25], radii=[0.01, 0.05, 0.1], 
-                                    n_samples=150, epochs=250):
-    ##Setting up directory
-    print("-----Setting up directories-----")
-    dir_path = './results/experiment_24-02'
-    if os.path.exists(dir_path):
-        print("Directory already exists; Aborting!")
-        exit()
-    # Creating subdirectories.
-    os.mkdir(dir_path)
-    os.mkdir(dir_path + '/weights')
-    os.mkdir(dir_path + '/loss')
-    print("Success!")
-    ## Hyperparameter-sweep
-    for radius in radii:
-        for depth in depths:
+        for radius in radii:
             print("===== depth", depth, "and radius", radius, "=====")      
             # Setting up VQE.
             current_vqe = vqe(molecule, n_uploads=1, var_depth=depth)
             # Training vqe surrogate on random data.
-            history = train_surrogate_random_neighborhood(current_vqe, radius=radius, 
-                                                            n_samples=n_samples, epochs=epochs)
-            # Saving model parameters.
+            history = train_surrogate_random(current_vqe, radius=radius, n_samples=n_samples, epochs=epochs)
+            ## Saving results
             print("Saving the results.")
+            # Training data.
+            filename =  '/data/train_params-' + str(depth) + '_' + str(radius) + '.p'
+            with open(dir_path + filename, 'wb') as f:
+                pickle.dump(current_vqe.surrogate.train_params, f)
+            filename =  '/data/train_labels-' + str(depth) + '_' + str(radius) + '.p'
+            with open(dir_path + filename, 'wb') as f:
+                pickle.dump(current_vqe.surrogate.train_labels, f)
+            # Validation data.
+            filename =  '/data/test_params-' + str(depth) + '_' + str(radius) + '.p'
+            with open(dir_path + filename, 'wb') as f:
+                pickle.dump(current_vqe.surrogate.test_params, f)
+            filename =  '/data/test_labels-' + str(depth) + '_' + str(radius) + '.p'
+            with open(dir_path + filename, 'wb') as f:
+                pickle.dump(current_vqe.surrogate.test_labels, f)
+            # Trained weights.
             trained_weights = current_vqe.surrogate.pqc_layer.symbol_values()
             filename =  '/weights/trained_weights-' + str(depth) + '_' + str(radius) + '.p'
             with open(dir_path + filename, 'wb') as f:
                 pickle.dump(trained_weights, f)
-            # Saving training loss.
+            # Training loss.
             train_loss = history.history['loss'] 
             filename =  '/loss/train_loss-' + str(depth) + '_' + str(radius) + '.p'
             with open(dir_path + filename, 'wb') as f:      
                 pickle.dump(train_loss, f)
-            # Saving validation loss.
+            # Validation loss.
             val_loss = history.history['val_loss']
             filename =  '/loss/val_loss-' + str(depth) + '_' + str(radius) + '.p'
             with open(dir_path + filename, 'wb') as f:   
@@ -163,14 +111,14 @@ def hwe_experiment_neighborhood(molecule, depths=[3, 10, 25], radii=[0.01, 0.05,
             # Saving final losses
             filename =  '/final_loss-' + str(depth) + '_' + str(radius) + '.txt'
             with open(dir_path + filename, 'w') as f: 
-                loss_txt = "Training loss:" + str(train_loss[-1]) + " and Validation loss:" + str(val_loss[-1])
-                print(loss_txt, file=f)
+                txt = "Training loss:" + str(train_loss[-1]) + " and Validation loss:" + str(val_loss[-1])
+                print(txt, file=f)
                     
         
             
 if __name__ == "__main__":    
     molecule = "./molecules/molecule1"
-    hwe_experiment_neighborhood(molecule, n_samples=3, epochs=1)
+    hwe_experiment(molecule)
     #vqe_test = vqe(filename, n_uploads=1, var_depth=1, verbose=True)
     #train_surrogate_random(vqe_test, n_samples=3, epochs=1)
     
