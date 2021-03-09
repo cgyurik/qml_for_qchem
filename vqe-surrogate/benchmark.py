@@ -28,6 +28,7 @@ def plot_losses(train_losses, val_losses, radius, depths=[3, 7, 13], dir_path='.
         plt.plot(train_losses[i], label=label)
     plt.xlabel('Epoch.')
     plt.ylabel('MSE of predicted energy.')
+    plt.legend()
     filename = dir_path + '/train_loss-' + str(radius) + '.png'
     plt.savefig(filename)
     plt.close()
@@ -37,6 +38,8 @@ def plot_losses(train_losses, val_losses, radius, depths=[3, 7, 13], dir_path='.
         label = 'depth '+ str(depths[i])
         plt.plot(val_losses[i], label=label)
     plt.xlabel('Epoch.')
+    plt.ylabel('MSE of predicted energy.')
+    plt.legend()
     filename = dir_path + '/val_loss-' + str(radius) + '.png'
     plt.savefig(filename)
     plt.close()
@@ -44,7 +47,7 @@ def plot_losses(train_losses, val_losses, radius, depths=[3, 7, 13], dir_path='.
 """
 Comparing against classical model.
 """
-def compare_classical(params, labels, cur_vqe, model_id, layers=[5, 5, 5], 
+def compare_classical(params, labels, cur_vqe, pqc_weights, model_id, layers=[5, 5, 5], 
                         dir_path='./results/experiment_02-03'):
     ## Constructing classical model.
     input_layer = tf.keras.Input(shape=(len(params[0][0]), ))
@@ -63,10 +66,10 @@ def compare_classical(params, labels, cur_vqe, model_id, layers=[5, 5, 5],
     ## Evaluating quantum model on test sets.
     print("  - evaluating quantum model.")
     q_test_predictions = []
-    resolver = cirq.ParamResolver(cur_vqe.surrogate.pqc_layer.symbol_values())
+    resolver = cirq.ParamResolver(pqc_weights)
     resolved_pqc = cirq.resolve_parameters(cur_vqe.surrogate.pqc, resolver)    
-    for params in test_params:
-        resolved_vqe = cur_vqe.ansatz.tensorable_ucc_circuit(params, cur_vqe.qubits)
+    for param in params[1]:
+        resolved_vqe = cur_vqe.ansatz.tensorable_ucc_circuit(param, cur_vqe.qubits)
         final_circuit = resolved_vqe + resolved_pqc
         final_state = cirq.final_state_vector(final_circuit)
         qubit_map = {}
@@ -75,7 +78,9 @@ def compare_classical(params, labels, cur_vqe, model_id, layers=[5, 5, 5],
         prediction = cur_vqe.surrogate.readouts.expectation_from_state_vector(
                                                     final_state/np.linalg.norm(final_state),qubit_map).real
         q_test_predictions.append(prediction)
-        
+    print(q_test_predictions, model_id)
+    
+    """    
     ## Plotting comparisson.
     print("  - plotting results.")
     a = plt.axes(aspect='equal')
@@ -91,21 +96,22 @@ def compare_classical(params, labels, cur_vqe, model_id, layers=[5, 5, 5],
     filename = dir_path + '/comparison-' + model_id + '.png'
     plt.savefig(filename)
     plt.close()
+    """
     
 if __name__ == "__main__":
     ## Location of current results
     dir_path = './results/experiment_02-03/folds'
     ## Hyperparameters
-    #radii = [0.01, 0.05, 0.1, 0.25, 0.5]
-    radii = [0.5]
+    radii = [0.01, 0.05, 0.1, 0.25, 0.5]
+    #radii = [0.5]
     # quantum
-    #depths = [3, 7, 13]
-    depths = [3, 7]
+    depths = [3, 7, 13]
+    #depths = [3, 7]
     # classical
     nn_layers = [[2], [3], [4, 4]]
     ## Representative folds per depth
-    #folds = [[1, 1, 1, 0, 0], [1, 0, 2, 1, 0], [2, 2, 2, 1]]
-    folds = [[0], [0]]
+    folds = [[1, 1, 1, 0, 0], [1, 0, 2, 1, 0], [2, 2, 2, 1, None]]
+    #folds = [[0], [0]]
     
     ## Going over all hyperparameter configurations
     for i in range(len(radii)):    
@@ -113,37 +119,45 @@ if __name__ == "__main__":
         val_losses = []
         for j in range(len(depths)):
             best_fold = folds[j][i]
+            # skip if experiment not finished
+            if best_fold is None:
+                break
+            depth = str(depths[j])
+            radius = str(radii[i])
             ## Collecting all the losses
             dir_path_fold = dir_path + '/fold_' + str(best_fold)
-            dir_path_temp = dir_path_fold + '/loss/train_loss-' + str(depths[j]) + '_' + str(radii[i]) + '.p'
+            dir_path_temp = dir_path_fold + '/loss/train_loss-' + depth + '_' + radius + '.p'
             with (open(dir_path_temp, 'rb')) as openfile:
                 train_losses.append(pickle.load(openfile))
-            dir_path_temp = dir_path_fold + '/loss/val_loss-' + str(depths[j]) + '_' + str(radii[i]) + '.p'
+            dir_path_temp = dir_path_fold + '/loss/val_loss-' + depth + '_' + radius + '.p'
             with (open(dir_path_temp, 'rb')) as openfile:
                 val_losses.append(pickle.load(openfile))
             
             ## Collecting all train/test parameters
-            dir_path_temp = dir_path_fold + '/data/train_params-' + str(depths[j]) + '_' + str(radii[i]) + '.p'
+            dir_path_temp = dir_path_fold + '/data/train_params-' + depth + '_' + radius + '.p'
             with (open(dir_path_temp, 'rb')) as openfile:
                 train_params = pickle.load(openfile)
-            dir_path_temp = dir_path_fold + '/data/test_params-' + str(depths[j]) + '_' + str(radii[i]) + '.p'
+            dir_path_temp = dir_path_fold + '/data/test_params-' + depth + '_' + radius + '.p'
             with (open(dir_path_temp, 'rb')) as openfile:
                 test_params = pickle.load(openfile)
             params = [train_params, test_params]
             
             ## Collecting all train/test labels
-            dir_path_temp = dir_path_fold + '/data/train_labels-' + str(depths[j]) + '_' + str(radii[i]) + '.p'
+            dir_path_temp = dir_path_fold + '/data/train_labels-' + depth + '_' + radius + '.p'
             with (open(dir_path_temp, 'rb')) as openfile:
                 train_labels = pickle.load(openfile)
-            dir_path_temp = dir_path_fold + '/data/test_labels-' + str(depths[j]) + '_' + str(radii[i]) + '.p'
+            dir_path_temp = dir_path_fold + '/data/test_labels-' + depth + '_' + radius + '.p'
             with (open(dir_path_temp, 'rb')) as openfile:
                 test_labels = pickle.load(openfile)
             labels = [train_labels, test_labels]
      
             ## Setting up vqe.
-            #cur_vqe = vqe('./molecules/molecule1', n_uploads=1, var_depth=depths[j])       
-            #model_id = str(depths[j]) + '_' + str(radii[i])
-            #print("Comparing quantum with classical model for depth", depths[j], "and radius", radii[i])
-            #compare_classical(params, labels, cur_vqe, model_id, layers=nn_layers[j])
+            print("Comparing quantum with classical model for depth", depths[j], "and radius", radii[i])
+            cur_vqe = vqe('./molecules/molecule1', n_uploads=1, var_depth=depths[j])       
+            model_id = depth + '_' + radius
+            dir_path_temp = dir_path_fold + '/weights/trained_weights-' + depth + '_' + radius + '.p'
+            with (open(dir_path_temp, 'rb')) as openfile:
+                pqc_weights = pickle.load(openfile) 
+            compare_classical(params, labels, cur_vqe, pqc_weights, model_id, layers=nn_layers[j])
         ## Plotting the losses
         plot_losses(train_losses, val_losses, radii[i])    

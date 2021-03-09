@@ -141,7 +141,7 @@ class tfq_model():
         return model
 
     """
-    Load VQE cost function evaluations dataset
+    Load VQE cost function evaluations dataset (if not split into train/test yet)
     """
     def load_data(self, data, vqe_ansatz, split=0.6667):
         ## Creating state prep. circuits from params
@@ -172,5 +172,43 @@ class tfq_model():
         self.train_states = tfq.convert_to_tensor(train_vqe_circuits)
         self.test_states = tfq.convert_to_tensor(test_vqe_circuits)
 
-        return 
+        return
+        
+    """
+    Load VQE cost function evaluations dataset (if already split in train/test)
+    """
+    def load_presplit_data(self, params, labels, vqe_ansatz, split=0.6667):
+        ## Reading out the split.
+        train_params =  params[0]
+        test_params = params[1]
+        train_labels = labels[0]
+        test_labels = labels[1] 
+        
+        ## Creating state prep. circuits from params
+        print('    * processing presplit data.')
+        train_data = []
+        for i in range(len(train_params)):
+            resolved_ansatz = vqe_ansatz.tensorable_ucc_circuit(train_params[i], self.qubits)
+            train_data.append({"circuit": resolved_ansatz, "energy": train_labels[i], 
+                                                "params": train_params[i]})
+        test_data = []
+        for i in range(len(test_params)):
+            resolved_ansatz = vqe_ansatz.tensorable_ucc_circuit(test_params[i], self.qubits)
+            test_data.append({"circuit": resolved_ansatz, "energy": test_labels[i], 
+                                                "params": test_params[i]}) 
+
+        # Parsing labels and params.
+        self.train_labels = np.array([train_data[j]['energy'] for j in range(len(train_data))])
+        self.test_labels = np.array([test_data[j]['energy'] for j in range(len(test_data))])
+        self.train_params = [train_data[j]['params'] for j in range(len(train_data))]
+        self.test_params = [test_data[j]['params'] for j in range(len(test_data))]
+
+        # Converting to tensor.
+        print('    * converting circuits to tensors.')
+        train_vqe_circuits = [train_data[j]['circuit'] for j in range(len(train_data))]
+        test_vqe_circuits = [test_data[j]['circuit'] for j in range(len(test_data))]
+        self.train_states = tfq.convert_to_tensor(train_vqe_circuits)
+        self.test_states = tfq.convert_to_tensor(test_vqe_circuits)
+
+        return  
 
