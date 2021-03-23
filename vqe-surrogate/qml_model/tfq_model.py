@@ -15,8 +15,6 @@ import matplotlib.pyplot as plt
 
 """
 [Research]
-    - 'pool-circuit' architecture.
-    - 'controller_nn' architecture.
     - 'postprocess_nn' architecture.
 """
 

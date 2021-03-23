@@ -20,7 +20,8 @@ import matplotlib.pyplot as plt
 """
 Plotting losses
 """
-def plot_losses(train_losses, val_losses, radius, depths=[3, 7, 13], dir_path='./results/experiment_02-03'):
+def plot_losses(train_losses, val_losses, radius, depths=[3, 7, 13], 
+                                                dir_path='./results/experiment_02-03_best-folds'):
     ## Training loss.
     plt.title('Training loss for radius ' + str(radius) + '.')
     for i in range(len(train_losses)):
@@ -48,7 +49,7 @@ def plot_losses(train_losses, val_losses, radius, depths=[3, 7, 13], dir_path='.
 Comparing against classical model.
 """
 def compare_classical(params, labels, cur_vqe, pqc_weights, model_id, layers=[5, 5, 5], 
-                        dir_path='./results/experiment_02-03'):
+                        dir_path='./results/experiment_02-03_best-folds'):
     ## Constructing classical model.
     input_layer = tf.keras.Input(shape=(len(params[0][0]), ))
     output = tf.keras.layers.Dense(layers[0])(input_layer)
@@ -76,11 +77,11 @@ def compare_classical(params, labels, cur_vqe, pqc_weights, model_id, layers=[5,
         for i in range(len(cur_vqe.qubits)):
             qubit_map[cur_vqe.qubits[i]] = i
         prediction = cur_vqe.surrogate.readouts.expectation_from_state_vector(
-                                                    final_state/np.linalg.norm(final_state),qubit_map).real
+                                                                    final_state/np.linalg.norm(final_state),
+                                                                    qubit_map).real
         q_test_predictions.append(prediction)
-    print(q_test_predictions, model_id)
     
-    """    
+  
     ## Plotting comparisson.
     print("  - plotting results.")
     a = plt.axes(aspect='equal')
@@ -96,57 +97,65 @@ def compare_classical(params, labels, cur_vqe, pqc_weights, model_id, layers=[5,
     filename = dir_path + '/comparison-' + model_id + '.png'
     plt.savefig(filename)
     plt.close()
-    """
+
     
 if __name__ == "__main__":
     ## Location of current results
-    dir_path = './results/experiment_02-03/folds'
+    dir_path = './results/experiment_02-03_best-folds'
     ## Hyperparameters
     radii = [0.01, 0.05, 0.1, 0.25, 0.5]
-    #radii = [0.5]
     # quantum
     depths = [3, 7, 13]
-    #depths = [3, 7]
     # classical
     nn_layers = [[2], [3], [4, 4]]
-    ## Representative folds per depth
-    folds = [[1, 1, 1, 0, 0], [1, 0, 2, 1, 0], [2, 2, 2, 1, None]]
-    #folds = [[0], [0]]
     
     ## Going over all hyperparameter configurations
     for i in range(len(radii)):    
         train_losses = []
         val_losses = []
         for j in range(len(depths)):
-            best_fold = folds[j][i]
-            # skip if experiment not finished
-            if best_fold is None:
-                break
             depth = str(depths[j])
             radius = str(radii[i])
-            ## Collecting all the losses
-            dir_path_fold = dir_path + '/fold_' + str(best_fold)
-            dir_path_temp = dir_path_fold + '/loss/train_loss-' + depth + '_' + radius + '.p'
-            with (open(dir_path_temp, 'rb')) as openfile:
-                train_losses.append(pickle.load(openfile))
-            dir_path_temp = dir_path_fold + '/loss/val_loss-' + depth + '_' + radius + '.p'
-            with (open(dir_path_temp, 'rb')) as openfile:
-                val_losses.append(pickle.load(openfile))
             
+            # Skip missing experiment.
+            if depths[j] == 13 and radii[i] == 0.5:
+                continue
+            
+            ## Collecting all the losses
+            train_loss = []
+            val_loss = []
+            # Train loss.
+            dir_path_temp = dir_path + '/past_loss/train_loss-' + depth + '_' + radius + '.p'
+            with (open(dir_path_temp, 'rb')) as openfile:
+                train_loss += pickle.load(openfile)
+            dir_path_temp = dir_path + '/loss/train_loss-' + depth + '_' + radius + '.p'
+            with (open(dir_path_temp, 'rb')) as openfile:
+                train_loss += pickle.load(openfile)
+            # Val loss.
+            dir_path_temp = dir_path + '/past_loss/val_loss-' + depth + '_' + radius + '.p'
+            with (open(dir_path_temp, 'rb')) as openfile:
+                val_loss += pickle.load(openfile)
+            dir_path_temp = dir_path + '/loss/val_loss-' + depth + '_' + radius + '.p'
+            with (open(dir_path_temp, 'rb')) as openfile:
+                val_loss += pickle.load(openfile)
+            train_losses.append(train_loss)
+            val_losses.append(val_loss)
+            
+            """
             ## Collecting all train/test parameters
-            dir_path_temp = dir_path_fold + '/data/train_params-' + depth + '_' + radius + '.p'
+            dir_path_temp = dir_path + '/data/train_params-' + depth + '_' + radius + '.p'
             with (open(dir_path_temp, 'rb')) as openfile:
                 train_params = pickle.load(openfile)
-            dir_path_temp = dir_path_fold + '/data/test_params-' + depth + '_' + radius + '.p'
+            dir_path_temp = dir_path + '/data/test_params-' + depth + '_' + radius + '.p'
             with (open(dir_path_temp, 'rb')) as openfile:
                 test_params = pickle.load(openfile)
             params = [train_params, test_params]
             
             ## Collecting all train/test labels
-            dir_path_temp = dir_path_fold + '/data/train_labels-' + depth + '_' + radius + '.p'
+            dir_path_temp = dir_path + '/data/train_labels-' + depth + '_' + radius + '.p'
             with (open(dir_path_temp, 'rb')) as openfile:
                 train_labels = pickle.load(openfile)
-            dir_path_temp = dir_path_fold + '/data/test_labels-' + depth + '_' + radius + '.p'
+            dir_path_temp = dir_path + '/data/test_labels-' + depth + '_' + radius + '.p'
             with (open(dir_path_temp, 'rb')) as openfile:
                 test_labels = pickle.load(openfile)
             labels = [train_labels, test_labels]
@@ -155,9 +164,10 @@ if __name__ == "__main__":
             print("Comparing quantum with classical model for depth", depths[j], "and radius", radii[i])
             cur_vqe = vqe('./molecules/molecule1', n_uploads=1, var_depth=depths[j])       
             model_id = depth + '_' + radius
-            dir_path_temp = dir_path_fold + '/weights/trained_weights-' + depth + '_' + radius + '.p'
+            dir_path_temp = dir_path + '/weights/trained_weights-' + depth + '_' + radius + '.p'
             with (open(dir_path_temp, 'rb')) as openfile:
                 pqc_weights = pickle.load(openfile) 
             compare_classical(params, labels, cur_vqe, pqc_weights, model_id, layers=nn_layers[j])
+            """
         ## Plotting the losses
         plot_losses(train_losses, val_losses, radii[i])    

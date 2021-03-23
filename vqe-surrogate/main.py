@@ -126,50 +126,7 @@ def hwe_experiment(molecule, depths=[3, 7, 13], radii=[0.01, 0.05, 0.1, 0.25, 0.
         
             
 if __name__ == "__main__":    
-    molecule = "./molecules/molecule1"
-    load_path = './results/experiment_02-03/folds'
-    ## Hyperparameters
-    radii = [0.01, 0.05, 0.1, 0.25, 0.5]
-    depths = [3, 7, 13]
-    ## Representative folds per depth
-    folds = [[1, 1, 1, 0, 0], [1, 0, 2, 1, 0], [2, 2, 2, 1, None]]
-        
-    ## Going over all hyperparameter configurations
-    for i in range(len(radii)):    
-        for j in range(len(depths)):
-            best_fold = folds[j][i]
-            # skip if experiment not finished
-            if best_fold is None:
-                break
-            # setting up path id
-            depth = str(depths[j])
-            radius = str(radii[i])
-            ## Loading pretrained weights.
-            dir_path_fold = load_path + '/fold_' + str(best_fold)
-            dir_path_temp = dir_path_fold + '/weights/trained_weights-' + depth + '_' + radius + '.p'
-            with (open(dir_path_temp, 'rb')) as openfile:
-                trained_weights = pickle.load(openfile)
-            ## Loading data.
-            # params
-            dir_path_temp = dir_path_fold + '/data/train_params-' + depth + '_' + radius + '.p'
-            with (open(dir_path_temp, 'rb')) as openfile:
-                train_params = pickle.load(openfile)
-            dir_path_temp = dir_path_fold + '/data/test_params-' + depth + '_' + radius + '.p'
-            with (open(dir_path_temp, 'rb')) as openfile:
-                test_params = pickle.load(openfile)
-            params = [train_params, test_params]
-            # labels
-            dir_path_temp = dir_path_fold + '/data/train_labels-' + depth + '_' + radius + '.p'
-            with (open(dir_path_temp, 'rb')) as openfile:
-                train_labels = pickle.load(openfile)
-            dir_path_temp = dir_path_fold + '/data/test_labels-' + depth + '_' + radius + '.p'
-            with (open(dir_path_temp, 'rb')) as openfile:
-                test_labels = pickle.load(openfile)
-            labels = [train_labels, test_labels]
-            data = [params, labels]
-            hwe_experiment(molecule, depths=[depths[j]], radii=[radii[i]], 
-                            presplit_data=data, trained_weights=trained_weights)
-                            
+    molecule = "./molecules/molecule1"                        
     #vqe_test = vqe(filename, n_uploads=1, var_depth=1, verbose=True)
     #train_surrogate_random(vqe_test, n_samples=3, epochs=1)
     
